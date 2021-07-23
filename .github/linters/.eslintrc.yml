@@ -1,0 +1,64 @@
+---
+#############################
+#############################
+## JavaScript Linter rules ##
+#############################
+#############################
+
+############
+# Env Vars #
+############
+env:
+  browser: true
+  es6: true
+  jest: true
+
+###############
+# Global Vars #
+###############
+globals:
+  # Atomics: readonly
+  # SharedArrayBuffer: readonly
+  CacheService: readonly
+  CalendarApp: readonly
+  CardService: readonly
+  DocumentApp: readonly
+  DriveApp: readonly
+  FormApp: readonly
+  GmailApp: readonly
+  HtmlService: readonly
+  Logger: readonly
+  MailApp: readonly
+  PropertiesService: readonly
+  ScriptApp: readonly
+  Session: readonly
+  SitesApp: readonly
+  SlidesApp: readonly
+  SpreadsheetApp: readonly
+  UrlFetchApp: readonly
+  Utilities: readonly
+  XmlService: readonly
+
+###############
+# Parser vars #
+###############
+parser: '@typescript-eslint/parser'
+parserOptions:
+  ecmaVersion: 2018
+  sourceType: script
+
+###########
+# Plugins #
+###########
+extends:
+  - 'eslint:recommended'
+  - 'plugin:prettier/recommended'
+plugins:
+  - '@typescript-eslint'
+
+#########
+# Rules #
+#########
+rules:
+  no-useless-escape: warn
+  semi: error
