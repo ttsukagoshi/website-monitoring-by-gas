@@ -1,0 +1,33 @@
+{
+  "name": "website-monitoring-by-gas",
+  "version": "1.0.0",
+  "description": "Website status monitoring using Google Apps Script",
+  "main": "websiteMonitoring.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ttsukagoshi/website-monitoring-by-gas.git"
+  },
+  "keywords": [
+    "google-apps-script",
+    "google-sheets",
+    "website-status-monitoring"
+  ],
+  "author": "ttsukagoshi",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ttsukagoshi/website-monitoring-by-gas/issues"
+  },
+  "homepage": "https://github.com/ttsukagoshi/website-monitoring-by-gas#readme",
+  "devDependencies": {
+    "@google/clasp": "^2.4.0",
+    "@types/google-apps-script": "^1.0.37",
+    "eslint": "^7.31.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "prettier": "^2.3.2",
+    "typescript": "^4.3.5"
+  }
+}
