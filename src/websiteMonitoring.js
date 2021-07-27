@@ -32,8 +32,10 @@ function onOpen() {
 }
 
 function websiteMonitoring() {
+  // const myEmail = Session.getActiveUser().getEmail();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const timeZone = ss.getSpreadsheetTimeZone();
+  const currentYear = Utilities.formatDate(new Date(), timeZone, 'yyyy');
   // Get the list of target websites to monitor
   const targetWebsitesArr = ss
     .getSheetByName(SHEET_NAME_TARGET_WEBSITES)
@@ -67,7 +69,7 @@ function websiteMonitoring() {
   }, {});
   console.log(JSON.stringify(options)); ////////////
   try {
-    // Parse options.ALLOWED_RESPONSE_CODES and options.ERROR_RESPONSE_CODES
+    // Replace wildcards in options.ALLOWED_RESPONSE_CODES and options.ERROR_RESPONSE_CODES to actual codes
     options.ALLOWED_RESPONSE_CODES = parseResponseCodes_(
       options.ALLOWED_RESPONSE_CODES
     );
@@ -78,6 +80,50 @@ function websiteMonitoring() {
       options.ERROR_RESPONSE_CODES
     );
     console.log(JSON.stringify(options)); ////////////
+    // Get the list of existing spreadsheets to log the results of status check
+    const logSpreadsheetsSheet = ss.getSheetByName(SHEET_NAME_SPREADSHEETS);
+    const logSpreadsheetsArr = logSpreadsheetsSheet.getDataRange().getValues();
+    const logSpreadsheetsHeader = logSpreadsheetsArr.shift();
+    const logSpreadsheets = logSpreadsheetsArr.map((row) =>
+      logSpreadsheetsHeader.reduce((o, k, i) => {
+        o[k] = row[i];
+        return o;
+      }, {})
+    );
+    console.log(JSON.stringify(logSpreadsheets)); ////////////////
+    const logSpreadsheetUrls = logSpreadsheets.filter(
+      (row) => row.YEAR == currentYear
+    );
+    if (!logSpreadsheetUrls.length) {
+      // Create a new spreadsheet from template
+      // if existing spreadsheet matching currentYear is not available
+      const targetFolder = options.DRIVE_FOLDER_ID
+        ? DriveApp.getFolderById(options.DRIVE_FOLDER_ID)
+        : DriveApp.getRootFolder();
+      const templateFile = DriveApp.getFileById(
+        SpreadsheetApp.openByUrl(options.TEMPLATE_LOG_SHEET_URL).getId()
+        // While the code can be made more simple by asking the user to enter the ID
+        // of the template spreadsheet, there is a certain logical usefulness to use
+        // the template URL rather than its ID since URLs can be directly referenced
+        // from the managing spreadsheet.
+      );
+      const newFileName = options.LOG_FILE_NAME
+        ? options.LOG_FILE_NAME.replace(/{{year}}/g, currentYear)
+        : templateFile.getName() + currentYear;
+      const newFileUrl = templateFile
+        .makeCopy(newFileName, targetFolder)
+        .getUrl();
+      // Append row to logSpreadsheetsSheet
+      logSpreadsheetsSheet.appendRow([currentYear, newFileName, newFileUrl]);
+      logSpreadsheetUrls.push({
+        YEAR: currentYear,
+        NAME: newFileName,
+        URL: newFileUrl,
+      });
+    }
+    const logSheet = SpreadsheetApp.openByUrl(
+      logSpreadsheetUrls[0].URL
+    ).getSheets()[0]; // Assuming that the logs be entered on the left-most worksheet of the log spreadsheet
     // Get the actual HTTP response codes
     let errorResponses = targetWebsites.reduce((errors, website) => {
       let responseRecord = {
@@ -98,7 +144,13 @@ function websiteMonitoring() {
       );
       responseRecord['responseTime'] = checkEnd - checkStart;
       console.log(JSON.stringify(responseRecord)); ///////////////
-      // appendRow [responseRecord.timeStamp, responseRecord.websiteName, responseRecord.targetUrl, responseRecord.responseCode, responseRecord.responseTime] to the recording spreadsheet here
+      logSheet.appendRow([
+        responseRecord.timeStamp,
+        responseRecord.websiteName,
+        responseRecord.targetUrl,
+        responseRecord.responseCode,
+        responseRecord.responseTime,
+      ]);
       if (
         options.ALLOWED_RESPONSE_CODES.includes(responseRecord.responseCode)
       ) {
@@ -112,10 +164,11 @@ function websiteMonitoring() {
       }
       return errors;
     }, []);
-
+    // if (errorResponses.length > 0) { /* send mail alert */ }
     console.log(errorResponses); ////////
   } catch (e) {
     console.log(e.stack); ///////////
+    // MailApp.sendEmail(myEmail, '[Website Status] Error', e.stack);
   }
 }
 
