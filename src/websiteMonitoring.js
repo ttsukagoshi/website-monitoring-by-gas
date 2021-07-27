@@ -26,8 +26,9 @@ const OPTIONS_CONVERT_TO_ARRAY_KEYS = [
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Web Status')
-    .addItem('Manual Status Check', 'websiteMonitoring')
     // .addItem('Setup Trigger', 'setupTrigger')
+    .addSeparator()
+    .addItem('Manual Status Check', 'websiteMonitoring')
     .addToUi();
 }
 
@@ -48,7 +49,7 @@ function websiteMonitoring() {
       return o;
     }, {})
   );
-  console.log(JSON.stringify(targetWebsites)); ////////////
+  // console.log(JSON.stringify(targetWebsites)); ////////////
   // Parse options data from spreadsheet
   const optionsArr = ss
     .getSheetByName(SHEET_NAME_OPTIONS)
@@ -67,7 +68,51 @@ function websiteMonitoring() {
     }
     return obj;
   }, {});
-  console.log(JSON.stringify(options)); ////////////
+  // console.log(JSON.stringify(options)); ////////////
+  // Get the list of existing spreadsheets to log the results of status check
+  const logSpreadsheetsSheet = ss.getSheetByName(SHEET_NAME_SPREADSHEETS);
+  const logSpreadsheetsArr = logSpreadsheetsSheet.getDataRange().getValues();
+  const logSpreadsheetsHeader = logSpreadsheetsArr.shift();
+  const logSpreadsheets = logSpreadsheetsArr.map((row) =>
+    logSpreadsheetsHeader.reduce((o, k, i) => {
+      o[k] = row[i];
+      return o;
+    }, {})
+  );
+  // console.log(JSON.stringify(logSpreadsheets)); ////////////////
+  const logSpreadsheetUrls = logSpreadsheets.filter(
+    (row) => row.YEAR == currentYear
+  );
+  if (!logSpreadsheetUrls.length) {
+    // Create a new spreadsheet from template
+    // if existing spreadsheet matching currentYear is not available
+    const targetFolder = options.DRIVE_FOLDER_ID
+      ? DriveApp.getFolderById(options.DRIVE_FOLDER_ID)
+      : DriveApp.getRootFolder();
+    const templateFile = DriveApp.getFileById(
+      SpreadsheetApp.openByUrl(options.TEMPLATE_LOG_SHEET_URL).getId()
+      // While the code can be made more simple by asking the user to enter the ID
+      // of the template spreadsheet, there is a certain logical usefulness to use
+      // the template URL rather than its ID since URLs can be directly referenced
+      // from the managing spreadsheet.
+    );
+    const newFileName = options.LOG_FILE_NAME
+      ? options.LOG_FILE_NAME.replace(/{{year}}/g, currentYear)
+      : templateFile.getName() + currentYear;
+    const newFileUrl = templateFile
+      .makeCopy(newFileName, targetFolder)
+      .getUrl();
+    // Append row to logSpreadsheetsSheet
+    logSpreadsheetsSheet.appendRow([currentYear, newFileName, newFileUrl]);
+    logSpreadsheetUrls.push({
+      YEAR: currentYear,
+      NAME: newFileName,
+      URL: newFileUrl,
+    });
+  }
+  const logSheet = SpreadsheetApp.openByUrl(
+    logSpreadsheetUrls[0].URL
+  ).getSheets()[0]; // Assuming that the logs be entered on the left-most worksheet of the log spreadsheet
   try {
     // Replace wildcards in options.ALLOWED_RESPONSE_CODES and options.ERROR_RESPONSE_CODES to actual codes
     options.ALLOWED_RESPONSE_CODES = parseResponseCodes_(
@@ -79,51 +124,7 @@ function websiteMonitoring() {
     options.ERROR_RESPONSE_CODES = parseResponseCodes_(
       options.ERROR_RESPONSE_CODES
     );
-    console.log(JSON.stringify(options)); ////////////
-    // Get the list of existing spreadsheets to log the results of status check
-    const logSpreadsheetsSheet = ss.getSheetByName(SHEET_NAME_SPREADSHEETS);
-    const logSpreadsheetsArr = logSpreadsheetsSheet.getDataRange().getValues();
-    const logSpreadsheetsHeader = logSpreadsheetsArr.shift();
-    const logSpreadsheets = logSpreadsheetsArr.map((row) =>
-      logSpreadsheetsHeader.reduce((o, k, i) => {
-        o[k] = row[i];
-        return o;
-      }, {})
-    );
-    console.log(JSON.stringify(logSpreadsheets)); ////////////////
-    const logSpreadsheetUrls = logSpreadsheets.filter(
-      (row) => row.YEAR == currentYear
-    );
-    if (!logSpreadsheetUrls.length) {
-      // Create a new spreadsheet from template
-      // if existing spreadsheet matching currentYear is not available
-      const targetFolder = options.DRIVE_FOLDER_ID
-        ? DriveApp.getFolderById(options.DRIVE_FOLDER_ID)
-        : DriveApp.getRootFolder();
-      const templateFile = DriveApp.getFileById(
-        SpreadsheetApp.openByUrl(options.TEMPLATE_LOG_SHEET_URL).getId()
-        // While the code can be made more simple by asking the user to enter the ID
-        // of the template spreadsheet, there is a certain logical usefulness to use
-        // the template URL rather than its ID since URLs can be directly referenced
-        // from the managing spreadsheet.
-      );
-      const newFileName = options.LOG_FILE_NAME
-        ? options.LOG_FILE_NAME.replace(/{{year}}/g, currentYear)
-        : templateFile.getName() + currentYear;
-      const newFileUrl = templateFile
-        .makeCopy(newFileName, targetFolder)
-        .getUrl();
-      // Append row to logSpreadsheetsSheet
-      logSpreadsheetsSheet.appendRow([currentYear, newFileName, newFileUrl]);
-      logSpreadsheetUrls.push({
-        YEAR: currentYear,
-        NAME: newFileName,
-        URL: newFileUrl,
-      });
-    }
-    const logSheet = SpreadsheetApp.openByUrl(
-      logSpreadsheetUrls[0].URL
-    ).getSheets()[0]; // Assuming that the logs be entered on the left-most worksheet of the log spreadsheet
+    // console.log(JSON.stringify(options)); ////////////
     // Get the actual HTTP response codes
     let errorResponses = targetWebsites.reduce((errors, website) => {
       let responseRecord = {
@@ -137,13 +138,9 @@ function websiteMonitoring() {
         }).getResponseCode()
       );
       let checkEnd = new Date();
-      responseRecord['timeStamp'] = Utilities.formatDate(
-        checkEnd,
-        timeZone,
-        'yyyy-MM-dd HH:mm:ss Z'
-      );
-      responseRecord['responseTime'] = checkEnd - checkStart;
-      console.log(JSON.stringify(responseRecord)); ///////////////
+      responseRecord['timeStamp'] = standardFormatDate_(checkEnd, timeZone);
+      responseRecord['responseTime'] = checkEnd - checkStart; // Time in milliseconds
+      // console.log(JSON.stringify(responseRecord)); ///////////////
       logSheet.appendRow([
         responseRecord.timeStamp,
         responseRecord.websiteName,
@@ -168,6 +165,13 @@ function websiteMonitoring() {
     console.log(errorResponses); ////////
   } catch (e) {
     console.log(e.stack); ///////////
+    logSheet.appendRow([
+      standardFormatDate_(new Date(), timeZone),
+      '[ERROR]',
+      e.stack,
+      0,
+      0,
+    ]);
     // MailApp.sendEmail(myEmail, '[Website Status] Error', e.stack);
   }
 }
@@ -207,4 +211,14 @@ function parseResponseCodes_(codes, wildcard = 'x') {
       return parsedCodes.flat();
     })
     .flat();
+}
+
+/**
+ * Standardized date format for this script.
+ * @param {Date} dateObj Date object to format.
+ * @param {String} timeZone Time zone. Defaults to the script's time zone.
+ * @returns {String} The formatted date.
+ */
+function standardFormatDate_(dateObj, timeZone = Session.getScriptTimeZone()) {
+  return Utilities.formatDate(dateObj, timeZone, 'yyyy-MM-dd HH:mm:ss Z');
 }
