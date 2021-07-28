@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* exported onOpen, setupTrigger, websiteMonitoring */
+/* exported deleteTrigger, onOpen, setupTrigger, websiteMonitoring */
 
 // Sheet Names
 const SHEET_NAME_TARGET_WEBSITES = '01_Target Websites';
