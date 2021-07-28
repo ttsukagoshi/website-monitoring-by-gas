@@ -18,20 +18,74 @@
 const SHEET_NAME_TARGET_WEBSITES = '01_Target Websites';
 const SHEET_NAME_SPREADSHEETS = '90_Spreadsheets';
 const SHEET_NAME_OPTIONS = '99_Options';
+// Keys in the Options sheet whose value should be converted to arrays
 const OPTIONS_CONVERT_TO_ARRAY_KEYS = [
   'ALLOWED_RESPONSE_CODES',
   'ERROR_RESPONSE_CODES',
 ];
 
 function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('Web Status')
-    // .addItem('Setup Trigger', 'setupTrigger')
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('Web Status')
+    .addSubMenu(ui.createMenu('Setup').addItem('Setup Trigger', 'setupTrigger'))
     .addSeparator()
     .addItem('Manual Status Check', 'websiteMonitoring')
     .addToUi();
 }
 
+function setupTrigger() {
+  const ui = SpreadsheetApp.getUi();
+  const myEmail = Session.getActiveUser().getEmail();
+  // Parse options data from spreadsheet
+  const optionsArr = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName(SHEET_NAME_OPTIONS)
+    .getDataRange()
+    .getValues();
+  optionsArr.shift();
+  const options = optionsArr.reduce((obj, row) => {
+    let [key, value] = [row[1], row[2]]; // Assuming that the keys and their options are set in columns B and C, respectively.
+    if (key) {
+      if (OPTIONS_CONVERT_TO_ARRAY_KEYS.includes(key)) {
+        value = value.replace(/\s/g, ''); // Remove any whitespaces, should there by any
+        obj[key] = value.split(',');
+      } else {
+        obj[key] = value;
+      }
+    }
+    return obj;
+  }, {});
+  try {
+    const continueAlert = `Setting up new trigger for website status checks. \nThis process will delete all existing triggers set by ${myEmail}. Are you sure you want to continue?`;
+    const continueResponse = ui.alert(
+      'Resetting All Triggers',
+      continueAlert,
+      ui.ButtonSet.YES_NO_CANCEL
+    );
+    if (continueResponse !== ui.Button.YES) {
+      throw new Error('Trigger setup has been canceled.');
+    }
+    // Delete all existing triggers set by the user.
+    ScriptApp.getProjectTriggers().forEach((trigger) =>
+      ScriptApp.deleteTrigger(trigger)
+    );
+    // Setup a new trigger
+    ScriptApp.newTrigger('websiteMonitoring')
+      .timeBased()
+      .everyMinutes(options.TRIGGER_FREQUENCY)
+      .create();
+    ui.alert(
+      'Complete',
+      `Trigger set at ${options.TRIGGER_FREQUENCY}-minute interval.`,
+      ui.ButtonSet.OK
+    );
+  } catch (e) {
+    ui.alert(e.message);
+  }
+}
+
+/**
+ * The core function for checking the website status.
+ */
 function websiteMonitoring() {
   // const myEmail = Session.getActiveUser().getEmail();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
