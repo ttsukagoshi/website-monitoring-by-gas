@@ -15,10 +15,14 @@
 /* exported deleteTrigger, onOpen, setupTrigger, websiteMonitoring */
 
 // Sheet Names
-const SHEET_NAME_TARGET_WEBSITES = '01_Target Websites';
+const SHEET_NAME_DASHBOARD = '01_Dashboard';
 const SHEET_NAME_SPREADSHEETS = '90_Spreadsheets';
 const SHEET_NAME_OPTIONS = '99_Options';
-// Keys in the Options sheet whose value should be converted to arrays
+// Range parameters of the list of target websites in SHEET_NAME_DASHBOARD.
+const TARGET_WEBSITES_RANGE_POSITION = { row: 5, col: 2 }; // Position of the upper- and left-most cell including the header row
+const TARGET_WEBSITES_COL_NUM = 2; // Number of fields names (columns) in the list of target websites
+const DASHBOARD_STATUS_COL_NUM = 3; // Number of fields names (columns) in the dashboard status ranges, adjacent to the list of target websites
+// Keys in SHEET_NAME_OPTIONS whose value should be converted to arrays
 const OPTIONS_CONVERT_TO_ARRAY_KEYS = [
   'ALLOWED_RESPONSE_CODES',
   'ERROR_RESPONSE_CODES',
@@ -132,12 +136,15 @@ function websiteMonitoring() {
   const savedStatus = dp.getProperty(DP_KEY_SAVED_STATUS)
     ? JSON.parse(dp.getProperty(DP_KEY_SAVED_STATUS))
     : {};
-  console.log(JSON.stringify(`savedStatus: ${JSON.stringify(savedStatus)}`)); ////////////
-
   // Get the list of target websites to monitor
-  const targetWebsitesArr = ss
-    .getSheetByName(SHEET_NAME_TARGET_WEBSITES)
-    .getDataRange()
+  const targetWebsitesSheet = ss.getSheetByName(SHEET_NAME_DASHBOARD);
+  const targetWebsitesArr = targetWebsitesSheet
+    .getRange(
+      TARGET_WEBSITES_RANGE_POSITION.row,
+      TARGET_WEBSITES_RANGE_POSITION.col,
+      targetWebsitesSheet.getLastRow() - TARGET_WEBSITES_RANGE_POSITION.row + 1,
+      TARGET_WEBSITES_COL_NUM
+    )
     .getValues();
   const targetWebsitesHeader = targetWebsitesArr.shift();
   const targetWebsites = targetWebsitesArr.map((row) =>
@@ -149,7 +156,6 @@ function websiteMonitoring() {
       return o;
     }, {})
   );
-  // console.log(JSON.stringify(targetWebsites)); ////////////
   // Check and update savedStatus so that it matches with targetWebsites
   const savedStatusUpdated = Object.keys(savedStatus).reduce((obj, key) => {
     if (
@@ -161,9 +167,6 @@ function websiteMonitoring() {
     }
     return obj;
   }, {});
-  console.log(
-    JSON.stringify(`savedStatusUpdated: ${JSON.stringify(savedStatusUpdated)}`)
-  ); ////////////
   // Parse options data from spreadsheet
   const optionsArr = ss
     .getSheetByName(SHEET_NAME_OPTIONS)
@@ -182,7 +185,6 @@ function websiteMonitoring() {
     }
     return obj;
   }, {});
-  // console.log(JSON.stringify(options)); ////////////
   // Get the list of existing spreadsheets to log the results of status check
   const logSpreadsheetsSheet = ss.getSheetByName(SHEET_NAME_SPREADSHEETS);
   const logSpreadsheetsArr = logSpreadsheetsSheet.getDataRange().getValues();
@@ -193,7 +195,6 @@ function websiteMonitoring() {
       return o;
     }, {})
   );
-  // console.log(JSON.stringify(logSpreadsheets)); ////////////////
   const logSpreadsheetUrls = logSpreadsheets.filter(
     (row) => row.YEAR == currentYear
   );
@@ -238,8 +239,8 @@ function websiteMonitoring() {
     options.ERROR_RESPONSE_CODES = parseResponseCodes_(
       options.ERROR_RESPONSE_CODES
     );
-    // console.log(JSON.stringify(options)); ////////////
     // Get the actual HTTP response codes
+    let dashboardStatus = []; // Array to record on the dashboard worksheet
     let statusChange = targetWebsites.reduce(
       (changes, website) => {
         let responseRecord = {
@@ -281,7 +282,6 @@ function websiteMonitoring() {
           responseRecord.status = 'DOWN';
           changes.newErrors.push(responseRecord);
         }
-        console.log(`responseRecord: ${JSON.stringify(responseRecord)}`); ///////////////
         // Log result to the log spreadsheet
         logSheet.appendRow([
           responseRecord.timeStamp,
@@ -291,24 +291,31 @@ function websiteMonitoring() {
           responseRecord.responseTime,
           responseRecord.status,
         ]);
+        // Updates to the dashboard worksheet
+        dashboardStatus.push([
+          responseRecord.status,
+          responseRecord.responseCode,
+          responseRecord.timeStamp,
+        ]);
         // Update savedStatusUpdated
         savedStatusUpdated[responseRecord.targetUrlEncoded] = responseRecord;
         return changes;
       },
       { newErrors: [], resolved: [] }
     );
-    console.log(`savedStatusUpdated: ${JSON.stringify(savedStatusUpdated)}`); /////////
+    // Update the dashboard status
+    targetWebsitesSheet
+      .getRange(
+        TARGET_WEBSITES_RANGE_POSITION.row + 1,
+        TARGET_WEBSITES_RANGE_POSITION.col + TARGET_WEBSITES_COL_NUM,
+        dashboardStatus.length,
+        DASHBOARD_STATUS_COL_NUM
+      )
+      .setValues(dashboardStatus);
     // Save the updated savedStatusUpdated in the document properties
     dp.setProperty(DP_KEY_SAVED_STATUS, JSON.stringify(savedStatusUpdated));
-    console.log(`statusChange: ${JSON.stringify(statusChange)}`); ////////
+    // Update dashboard info
     if (statusChange.newErrors.length > 0) {
-      /*
-      let errorSites = statusChange.newErrors
-        .map(
-          (errorResponse) =>
-            `Site Name: ${errorResponse.websiteName}\nURL: ${errorResponse.targetUrl}\nResponse Code: ${errorResponse.responseCode}\nResponse Time: ${errorResponse.responseTime}\n`
-        )
-        .join('\n');*/
       MailApp.sendEmail(
         myEmail,
         '[Website Status Alert] Site DOWN',
@@ -335,6 +342,15 @@ function websiteMonitoring() {
           )}\n\n-----\nThis notice is managed by the following spreadsheet:\n${ss.getUrl()}`
       );
     }
+    // Log message
+    logSheet.appendRow([
+      standardFormatDate_(new Date(), timeZone),
+      '[COMPLETE]',
+      'Website status check is completed.',
+      0,
+      0,
+      'NA',
+    ]);
   } catch (e) {
     console.error(e.stack);
     logSheet.appendRow([
