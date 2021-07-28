@@ -23,16 +23,27 @@ const OPTIONS_CONVERT_TO_ARRAY_KEYS = [
   'ALLOWED_RESPONSE_CODES',
   'ERROR_RESPONSE_CODES',
 ];
+// Document property key(s)
+const DP_KEY_SAVED_STATUS = 'savedStatus';
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Web Status')
-    .addSubMenu(ui.createMenu('Setup').addItem('Setup Trigger', 'setupTrigger'))
+    .addSubMenu(
+      ui
+        .createMenu('Trigger')
+        .addItem('Setup Trigger', 'setupTrigger')
+        .addItem('Delete Trigger', 'deleteTrigger')
+    )
     .addSeparator()
     .addItem('Manual Status Check', 'websiteMonitoring')
     .addToUi();
 }
 
+/**
+ * Delete existing time-based trigger and set a new one
+ * based on the time interval entered by the user in the Options sheet.
+ */
 function setupTrigger() {
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
@@ -84,13 +95,45 @@ function setupTrigger() {
 }
 
 /**
+ * Delete existing trigger(s).
+ */
+function deleteTrigger() {
+  const ui = SpreadsheetApp.getUi();
+  const myEmail = Session.getActiveUser().getEmail();
+  try {
+    const continueAlert = `Deleting existing trigger(s) for website status checks set by ${myEmail}. Are you sure you want to continue?`;
+    const continueResponse = ui.alert(
+      'Deleting All Triggers',
+      continueAlert,
+      ui.ButtonSet.YES_NO_CANCEL
+    );
+    if (continueResponse !== ui.Button.YES) {
+      throw new Error('Trigger deletion has been canceled.');
+    }
+    // Delete all existing triggers set by the user.
+    ScriptApp.getProjectTriggers().forEach((trigger) =>
+      ScriptApp.deleteTrigger(trigger)
+    );
+    ui.alert('Complete', `Trigger(s) deleted.`, ui.ButtonSet.OK);
+  } catch (e) {
+    ui.alert(e.message);
+  }
+}
+
+/**
  * The core function for checking the website status.
  */
 function websiteMonitoring() {
-  // const myEmail = Session.getActiveUser().getEmail();
+  const myEmail = Session.getActiveUser().getEmail();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const timeZone = ss.getSpreadsheetTimeZone();
   const currentYear = Utilities.formatDate(new Date(), timeZone, 'yyyy');
+  const dp = PropertiesService.getDocumentProperties();
+  const savedStatus = dp.getProperty(DP_KEY_SAVED_STATUS)
+    ? JSON.parse(dp.getProperty(DP_KEY_SAVED_STATUS))
+    : {};
+  console.log(JSON.stringify(`savedStatus: ${JSON.stringify(savedStatus)}`)); ////////////
+
   // Get the list of target websites to monitor
   const targetWebsitesArr = ss
     .getSheetByName(SHEET_NAME_TARGET_WEBSITES)
@@ -99,11 +142,28 @@ function websiteMonitoring() {
   const targetWebsitesHeader = targetWebsitesArr.shift();
   const targetWebsites = targetWebsitesArr.map((row) =>
     targetWebsitesHeader.reduce((o, k, i) => {
+      if (k === 'TARGET URL' && !savedStatus[Utilities.base64Encode(row[i])]) {
+        savedStatus[Utilities.base64Encode(row[i])] = { status: null };
+      }
       o[k] = row[i];
       return o;
     }, {})
   );
   // console.log(JSON.stringify(targetWebsites)); ////////////
+  // Check and update savedStatus so that it matches with targetWebsites
+  const savedStatusUpdated = Object.keys(savedStatus).reduce((obj, key) => {
+    if (
+      targetWebsites
+        .map((site) => Utilities.base64Encode(site['TARGET URL']))
+        .includes(key)
+    ) {
+      obj[key] = savedStatus[key];
+    }
+    return obj;
+  }, {});
+  console.log(
+    JSON.stringify(`savedStatusUpdated: ${JSON.stringify(savedStatusUpdated)}`)
+  ); ////////////
   // Parse options data from spreadsheet
   const optionsArr = ss
     .getSheetByName(SHEET_NAME_OPTIONS)
@@ -180,53 +240,112 @@ function websiteMonitoring() {
     );
     // console.log(JSON.stringify(options)); ////////////
     // Get the actual HTTP response codes
-    let errorResponses = targetWebsites.reduce((errors, website) => {
-      let responseRecord = {
-        websiteName: website['WEBSITE NAME'],
-        targetUrl: website['TARGET URL'],
-      };
-      let checkStart = new Date();
-      responseRecord['responseCode'] = String(
-        UrlFetchApp.fetch(responseRecord.targetUrl, {
-          muteHttpExceptions: true,
-        }).getResponseCode()
-      );
-      let checkEnd = new Date();
-      responseRecord['timeStamp'] = standardFormatDate_(checkEnd, timeZone);
-      responseRecord['responseTime'] = checkEnd - checkStart; // Time in milliseconds
-      // console.log(JSON.stringify(responseRecord)); ///////////////
-      logSheet.appendRow([
-        responseRecord.timeStamp,
-        responseRecord.websiteName,
-        responseRecord.targetUrl,
-        responseRecord.responseCode,
-        responseRecord.responseTime,
-      ]);
-      if (
-        options.ALLOWED_RESPONSE_CODES.includes(responseRecord.responseCode)
-      ) {
+    let statusChange = targetWebsites.reduce(
+      (changes, website) => {
+        let responseRecord = {
+          websiteName: website['WEBSITE NAME'],
+          targetUrl: website['TARGET URL'],
+          targetUrlEncoded: Utilities.base64Encode(website['TARGET URL']),
+          status:
+            savedStatusUpdated[Utilities.base64Encode(website['TARGET URL'])]
+              .status,
+        };
+        let checkStart = new Date();
+        responseRecord['responseCode'] = String(
+          UrlFetchApp.fetch(responseRecord.targetUrl, {
+            muteHttpExceptions: true,
+          }).getResponseCode()
+        );
+        let checkEnd = new Date();
+        responseRecord['timeStamp'] = standardFormatDate_(checkEnd, timeZone);
+        responseRecord['responseTime'] = checkEnd - checkStart; // Time in milliseconds
+        // Determine if the returned HTTP response code means UP or DOWN
         if (
-          options.ERROR_RESPONSE_CODES.includes(responseRecord.responseCode)
+          options.ALLOWED_RESPONSE_CODES.includes(responseRecord.responseCode)
         ) {
-          errors.push(responseRecord);
+          if (
+            options.ERROR_RESPONSE_CODES.includes(
+              responseRecord.responseCode
+            ) &&
+            (!responseRecord.status || responseRecord.status === 'UP')
+          ) {
+            responseRecord.status = 'DOWN';
+            changes.newErrors.push(responseRecord);
+          } else if (responseRecord.status === 'DOWN') {
+            responseRecord.status = 'UP';
+            changes.resolved.push(responseRecord);
+          } else {
+            responseRecord.status = 'UP';
+          }
+        } else if (!responseRecord.status || responseRecord.status === 'UP') {
+          responseRecord.status = 'DOWN';
+          changes.newErrors.push(responseRecord);
         }
-      } else {
-        errors.push(responseRecord);
-      }
-      return errors;
-    }, []);
-    // if (errorResponses.length > 0) { /* send mail alert */ }
-    console.log(errorResponses); ////////
+        console.log(`responseRecord: ${JSON.stringify(responseRecord)}`); ///////////////
+        // Log result to the log spreadsheet
+        logSheet.appendRow([
+          responseRecord.timeStamp,
+          responseRecord.websiteName,
+          responseRecord.targetUrl,
+          responseRecord.responseCode,
+          responseRecord.responseTime,
+          responseRecord.status,
+        ]);
+        // Update savedStatusUpdated
+        savedStatusUpdated[responseRecord.targetUrlEncoded] = responseRecord;
+        return changes;
+      },
+      { newErrors: [], resolved: [] }
+    );
+    console.log(`savedStatusUpdated: ${JSON.stringify(savedStatusUpdated)}`); /////////
+    // Save the updated savedStatusUpdated in the document properties
+    dp.setProperty(DP_KEY_SAVED_STATUS, JSON.stringify(savedStatusUpdated));
+    console.log(`statusChange: ${JSON.stringify(statusChange)}`); ////////
+    if (statusChange.newErrors.length > 0) {
+      /*
+      let errorSites = statusChange.newErrors
+        .map(
+          (errorResponse) =>
+            `Site Name: ${errorResponse.websiteName}\nURL: ${errorResponse.targetUrl}\nResponse Code: ${errorResponse.responseCode}\nResponse Time: ${errorResponse.responseTime}\n`
+        )
+        .join('\n');*/
+      MailApp.sendEmail(
+        myEmail,
+        '[Website Status Alert] Site DOWN',
+        `The following website(s) are DOWN:\n\n${statusChange.newErrors
+          .map(
+            (errorResponse) =>
+              `Site Name: ${errorResponse.websiteName}\nURL: ${errorResponse.targetUrl}\nResponse Code: ${errorResponse.responseCode}\nResponse Time: ${errorResponse.responseTime}\n`
+          )
+          .join(
+            '\n'
+          )}\n\n-----\nThis notice is managed by the following spreadsheet:\n${ss.getUrl()}`
+      );
+    }
+    if (statusChange.resolved.length > 0) {
+      MailApp.sendEmail(
+        myEmail,
+        '[Website Status Notice] Site UP (Resolved)',
+        `The following website(s) that were DOWN are now UP:\n\n${statusChange.resolved
+          .map((resolvedResponse) => {
+            `Site Name: ${resolvedResponse.websiteName}\nURL: ${resolvedResponse.targetUrl}\nResponse Code: ${resolvedResponse.responseCode}\nResponse Time: ${resolvedResponse.responseTime}\n`;
+          })
+          .join(
+            '\n'
+          )}\n\n-----\nThis notice is managed by the following spreadsheet:\n${ss.getUrl()}`
+      );
+    }
   } catch (e) {
-    console.log(e.stack); ///////////
+    console.error(e.stack);
     logSheet.appendRow([
       standardFormatDate_(new Date(), timeZone),
       '[ERROR]',
       e.stack,
       0,
       0,
+      'NA',
     ]);
-    // MailApp.sendEmail(myEmail, '[Website Status] Error', e.stack);
+    MailApp.sendEmail(myEmail, '[Website Status] Error', e.stack);
   }
 }
 
