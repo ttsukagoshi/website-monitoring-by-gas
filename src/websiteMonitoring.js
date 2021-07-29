@@ -105,7 +105,7 @@ function deleteTrigger() {
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
   try {
-    const continueAlert = `Deleting existing trigger(s) for website status checks set by ${myEmail}. Are you sure you want to continue?`;
+    const continueAlert = `Deleting all existing trigger(s) on this spreadsheet/script set by ${myEmail}. Are you sure you want to continue?`;
     const continueResponse = ui.alert(
       'Deleting All Triggers',
       continueAlert,
