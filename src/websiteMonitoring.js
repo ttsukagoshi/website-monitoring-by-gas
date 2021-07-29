@@ -361,7 +361,13 @@ function websiteMonitoring() {
       0,
       'NA',
     ]);
-    MailApp.sendEmail(myEmail, '[Website Status] Error', `${e.stack}\n\n-----\nThis notice is managed by the following spreadsheet:\n${ss.getUrl()}`);
+    MailApp.sendEmail(
+      myEmail,
+      '[Website Status] Error',
+      `${
+        e.stack
+      }\n\n-----\nThis notice is managed by the following spreadsheet:\n${ss.getUrl()}`
+    );
   }
 }
 
