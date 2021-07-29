@@ -61,7 +61,7 @@ function setupTrigger() {
     let [key, value] = [row[1], row[2]]; // Assuming that the keys and their options are set in columns B and C, respectively.
     if (key) {
       if (OPTIONS_CONVERT_TO_ARRAY_KEYS.includes(key)) {
-        value = value.replace(/\s/g, ''); // Remove any whitespaces, should there by any
+        value = String(value).replace(/\s/g, ''); // Remove any whitespaces, should there by any
         obj[key] = value.split(',');
       } else {
         obj[key] = value;
@@ -105,7 +105,7 @@ function deleteTrigger() {
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
   try {
-    const continueAlert = `Deleting existing trigger(s) for website status checks set by ${myEmail}. Are you sure you want to continue?`;
+    const continueAlert = `Deleting all existing trigger(s) on this spreadsheet/script set by ${myEmail}. Are you sure you want to continue?`;
     const continueResponse = ui.alert(
       'Deleting All Triggers',
       continueAlert,
@@ -177,7 +177,7 @@ function websiteMonitoring() {
     let [key, value] = [row[1], row[2]]; // Assuming that the keys and their options are set in columns B and C, respectively.
     if (key) {
       if (OPTIONS_CONVERT_TO_ARRAY_KEYS.includes(key)) {
-        value = value.replace(/\s/g, ''); // Remove any whitespaces, should there by any
+        value = String(value).replace(/\s/g, ''); // Remove any whitespaces, should there by any
         obj[key] = value.split(',');
       } else {
         obj[key] = value;
@@ -361,7 +361,13 @@ function websiteMonitoring() {
       0,
       'NA',
     ]);
-    MailApp.sendEmail(myEmail, '[Website Status] Error', e.stack);
+    MailApp.sendEmail(
+      myEmail,
+      '[Website Status] Error',
+      `${
+        e.stack
+      }\n\n-----\nThis notice is managed by the following spreadsheet:\n${ss.getUrl()}`
+    );
   }
 }
 
