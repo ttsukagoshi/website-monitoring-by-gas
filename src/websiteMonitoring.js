@@ -61,7 +61,7 @@ function setupTrigger() {
     let [key, value] = [row[1], row[2]]; // Assuming that the keys and their options are set in columns B and C, respectively.
     if (key) {
       if (OPTIONS_CONVERT_TO_ARRAY_KEYS.includes(key)) {
-        value = value.replace(/\s/g, ''); // Remove any whitespaces, should there by any
+        value = String(value).replace(/\s/g, ''); // Remove any whitespaces, should there by any
         obj[key] = value.split(',');
       } else {
         obj[key] = value;
@@ -177,7 +177,7 @@ function websiteMonitoring() {
     let [key, value] = [row[1], row[2]]; // Assuming that the keys and their options are set in columns B and C, respectively.
     if (key) {
       if (OPTIONS_CONVERT_TO_ARRAY_KEYS.includes(key)) {
-        value = value.replace(/\s/g, ''); // Remove any whitespaces, should there by any
+        value = String(value).replace(/\s/g, ''); // Remove any whitespaces, should there by any
         obj[key] = value.split(',');
       } else {
         obj[key] = value;
