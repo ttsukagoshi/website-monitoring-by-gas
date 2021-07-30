@@ -12,7 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* exported deleteTimeBasedTriggers, onOpen, setupLogExtractionTrigger, setupStatusCheckTrigger, websiteMonitoringTriggered */
+/* exported
+deleteTimeBasedTriggers,
+extractStatusLogsTriggered,
+onOpen,
+setupLogExtractionTrigger,
+setupStatusCheckTrigger,
+websiteMonitoringTriggered
+*/
 
 // Sheet Names
 const SHEET_NAME_DASHBOARD = '01_Dashboard';
