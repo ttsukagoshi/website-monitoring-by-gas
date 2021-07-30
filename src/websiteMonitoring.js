@@ -54,9 +54,10 @@ function onOpen() {
  * Set time-based trigger for website status monitoring.
  */
 function setupStatusCheckTrigger() {
-  const frequencyKey = 'TRIGGER_FREQUENCY_STATUS_CHECK';
   const handlerFunction = 'websiteMonitoringTriggered';
-  setupTrigger(frequencyKey, handlerFunction);
+  const frequencyKey = 'TRIGGER_MINUTE_FREQUENCY_STATUS_CHECK';
+  const frequencyUnit = 'minute';
+  setupTrigger(handlerFunction, frequencyKey, frequencyUnit);
 }
 
 /**
@@ -64,18 +65,20 @@ function setupStatusCheckTrigger() {
  * into the managing spreadsheet.
  */
 function setupLogExtractionTrigger() {
-  const frequencyKey = 'TRIGGER_FREQUENCY_LOG_EXTRACTION';
   const handlerFunction = 'extractStatusLogsTriggered';
-  setupTrigger(frequencyKey, handlerFunction);
+  const frequencyKey = 'TRIGGER_DAYS_FREQUENCY_LOG_EXTRACTION';
+  const frequencyUnit = 'day';
+  setupTrigger(handlerFunction, frequencyKey, frequencyUnit);
 }
 
 /**
  * Set time-based trigger for the input handler function,
  * deleting existing triggers with the same handler function.
- * @param {String} frequencyKey Key in the options sheet that refers to the trigger frequency for this handler function.
  * @param {String} handlerFunction The function name to execute in this trigger.
+ * @param {String} frequencyKey Key in the options sheet that refers to the trigger frequency for this handler function.
+ * @param {String} frequencyUnit Unit of the value of frequencyKey, i.e., minute, hour, day, or week.
  */
-function setupTrigger(frequencyKey, handlerFunction) {
+function setupTrigger(handlerFunction, frequencyKey, frequencyUnit) {
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
   // Parse options data from spreadsheet
@@ -92,7 +95,11 @@ function setupTrigger(frequencyKey, handlerFunction) {
     return obj;
   }, {});
   try {
-    if (!options[frequencyKey]) {
+    if (
+      !options[frequencyKey] ||
+      options[frequencyKey] < 0 ||
+      !Number.isInteger(options[frequencyKey])
+    ) {
       throw new Error(
         `Invalid ${frequencyKey} value. Check the "${SHEET_NAME_OPTIONS}" worksheet for its value.`
       );
@@ -122,13 +129,32 @@ function setupTrigger(frequencyKey, handlerFunction) {
       }
     });
     // Setup a new trigger
-    ScriptApp.newTrigger(handlerFunction)
-      .timeBased()
-      .everyMinutes(options[frequencyKey])
-      .create();
+    if (frequencyUnit === 'minute') {
+      ScriptApp.newTrigger(handlerFunction)
+        .timeBased()
+        .everyMinutes(options[frequencyKey])
+        .create();
+    } else if (frequencyUnit === 'hour') {
+      ScriptApp.newTrigger(handlerFunction)
+        .timeBased()
+        .everyHours(options[frequencyKey])
+        .create();
+    } else if (frequencyUnit === 'day') {
+      ScriptApp.newTrigger(handlerFunction)
+        .timeBased()
+        .everyDays(options[frequencyKey])
+        .create();
+    } else if (frequencyUnit === 'week') {
+      ScriptApp.newTrigger(handlerFunction)
+        .timeBased()
+        .everyWeeks(options[frequencyKey])
+        .create();
+    } else {
+      throw new Error(`Invalid frequency unit: ${frequencyUnit}`);
+    }
     ui.alert(
       `Complete (${handlerFunction})`,
-      `Trigger set at ${options[frequencyKey]}-minute interval.`,
+      `Trigger set at ${options[frequencyKey]}-${frequencyUnit} interval.`,
       ui.ButtonSet.OK
     );
   } catch (e) {
@@ -403,6 +429,12 @@ function websiteMonitoring(triggered = false) {
     let completeMessage = 'Website status check is complete.';
     if (statusChange.newErrors.length > 0 || statusChange.resolved.length > 0) {
       completeMessage += `\nChanges to website status have been emailed to ${myEmail}`;
+      // Set a one-time trigger to update extracted status logs on the managing spreadsheet
+      // that will fire 30 secs later.
+      ScriptApp.newTrigger('extractStatusLogsTriggered')
+        .timeBased()
+        .after(30 * 1000)
+        .create();
     }
     logSheet.appendRow([
       standardFormatDate_(new Date(), timeZone),
