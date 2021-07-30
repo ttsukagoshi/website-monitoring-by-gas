@@ -1,6 +1,6 @@
 # clasp
 .clasp.json
 # node
-node_modules
+node_modules/
 # misc
 .DS_Store
