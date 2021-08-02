@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/* global LocalizedMessage */
 /* exported
 deleteTimeBasedTriggers,
 extractStatusLogsTriggered,
@@ -551,7 +552,7 @@ function extractStatusLogs(triggered = false) {
       let urlIndex = targetWebsitesHeader.indexOf(HEADER_NAME_TARGET_URL);
       if (urlIndex < 0) {
         throw new Error(
-          `"${HEADER_NAME_TARGET_URL}" is not found. Check the "${SHEET_NAME_DASHBOARD}" worksheet for the header name of the target websites\' URL`
+          `"${HEADER_NAME_TARGET_URL}" is not found. Check the "${SHEET_NAME_DASHBOARD}" worksheet for the header name of the target websites' URL`
         );
       }
       return row[urlIndex];
