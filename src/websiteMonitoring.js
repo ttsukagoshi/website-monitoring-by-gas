@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/* global LocalizedMessage */
 /* exported
 deleteTimeBasedTriggers,
 extractStatusLogsTriggered,
@@ -41,19 +42,33 @@ const OPTIONS_CONVERT_TO_ARRAY_KEYS = [
 const DP_KEY_SAVED_STATUS = 'savedStatus';
 
 function onOpen() {
+  const locale = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale();
+  const localMessage = new LocalizedMessage(locale);
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Web Status')
+  ui.createMenu(localMessage.messageList.menuTitle)
     .addSubMenu(
       ui
-        .createMenu('Triggers')
-        .addItem('Set Status Check Trigger', 'setupStatusCheckTrigger')
-        .addItem('Set Log Extraction Trigger', 'setupLogExtractionTrigger')
+        .createMenu(localMessage.messageList.menuTriggers)
+        .addItem(
+          localMessage.messageList.menuSetStatusCheckTrigger,
+          'setupStatusCheckTrigger'
+        )
+        .addItem(
+          localMessage.messageList.menuSetLogExtractionTrigger,
+          'setupLogExtractionTrigger'
+        )
         .addSeparator()
-        .addItem('Delete Triggers', 'deleteTimeBasedTriggers')
+        .addItem(
+          localMessage.messageList.menuDeleteTriggers,
+          'deleteTimeBasedTriggers'
+        )
     )
     .addSeparator()
-    .addItem('Check Status', 'websiteMonitoring')
-    .addItem('Extract Status Logs', 'extractStatusLogs')
+    .addItem(localMessage.messageList.menuCheckStatus, 'websiteMonitoring')
+    .addItem(
+      localMessage.messageList.menuExtractStatusLogs,
+      'extractStatusLogs'
+    )
     .addToUi();
 }
 
@@ -88,8 +103,10 @@ function setupLogExtractionTrigger() {
 function setupTrigger(handlerFunction, frequencyKey, frequencyUnit) {
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const localMessage = new LocalizedMessage(ss.getSpreadsheetLocale());
   // Parse options data from spreadsheet
-  const optionsArr = SpreadsheetApp.getActiveSpreadsheet()
+  const optionsArr = ss
     .getSheetByName(SHEET_NAME_OPTIONS)
     .getDataRange()
     .getValues();
@@ -108,26 +125,31 @@ function setupTrigger(handlerFunction, frequencyKey, frequencyUnit) {
       !Number.isInteger(options[frequencyKey])
     ) {
       throw new Error(
-        `Invalid ${frequencyKey} value. Check the "${SHEET_NAME_OPTIONS}" worksheet for its value.`
+        localMessage.replaceErrorInvalidFrequencyValue(
+          frequencyKey,
+          SHEET_NAME_OPTIONS
+        )
       );
     }
     // Brief descriptions of the handler functions
     const functionDesc = {
-      websiteMonitoringTriggered: ' to check website status',
+      websiteMonitoringTriggered:
+        localMessage.messageList.functionDescWebsiteMonitoringTriggered,
       extractStatusLogsTriggered:
-        ' to extract status logs into the managing spreadsheet',
+        localMessage.messageList.functionDescExtractStatusLogsTriggered,
     };
     // Confirm the user if they want to continue with the trigger setup.
-    const continueAlert = `Setting up new trigger${
-      functionDesc[handlerFunction] ? functionDesc[handlerFunction] : ''
-    }. \nThis process will delete existing trigger for this function that was set by ${myEmail}. Are you sure you want to continue?`;
+    const continueAlert = localMessage.replaceAlertMessageContinueTriggerSetup(
+      functionDesc[handlerFunction] ? functionDesc[handlerFunction] : '',
+      myEmail
+    );
     const continueResponse = ui.alert(
-      'Trigger Setup',
+      localMessage.messageList.alertTitleContinueTriggerSetup,
       continueAlert,
       ui.ButtonSet.YES_NO_CANCEL
     );
     if (continueResponse !== ui.Button.YES) {
-      throw new Error('Trigger setup has been canceled.');
+      throw new Error(localMessage.messageList.errorTriggerSetupCanceled);
     }
     // Delete existing trigger for this function set by the user.
     ScriptApp.getProjectTriggers().forEach((trigger) => {
@@ -157,11 +179,16 @@ function setupTrigger(handlerFunction, frequencyKey, frequencyUnit) {
         .everyWeeks(options[frequencyKey])
         .create();
     } else {
-      throw new Error(`Invalid frequency unit: ${frequencyUnit}`);
+      throw new Error(
+        localMessage.replaceErrorInvalidFrequencyUnit(frequencyUnit)
+      );
     }
     ui.alert(
-      `Complete (${handlerFunction})`,
-      `Trigger set at ${options[frequencyKey]}-${frequencyUnit} interval.`,
+      localMessage.replaceAlertTitleCompleteTriggerSetup(handlerFunction),
+      localMessage.replaceAlertMessageCompleteTriggerSetup(
+        options[frequencyKey],
+        frequencyUnit
+      ),
       ui.ButtonSet.OK
     );
   } catch (e) {
@@ -176,7 +203,7 @@ function deleteTimeBasedTriggers() {
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
   try {
-    const continueAlert = `Deleting all existing trigger(s) on this spreadsheet/script set by ${myEmail}. Are you sure you want to continue?`;
+    const continueAlert = `Deleting all existing trigger(s) on this spreadsheet/script set by ${myEmail}. Are you sure you want to continue?`; ///////
     const continueResponse = ui.alert(
       'Deleting All Triggers',
       continueAlert,
@@ -525,7 +552,7 @@ function extractStatusLogs(triggered = false) {
       let urlIndex = targetWebsitesHeader.indexOf(HEADER_NAME_TARGET_URL);
       if (urlIndex < 0) {
         throw new Error(
-          `"${HEADER_NAME_TARGET_URL}" is not found. Check the "${SHEET_NAME_DASHBOARD}" worksheet for the header name of the target websites\' URL`
+          `"${HEADER_NAME_TARGET_URL}" is not found. Check the "${SHEET_NAME_DASHBOARD}" worksheet for the header name of the target websites' URL`
         );
       }
       return row[urlIndex];
