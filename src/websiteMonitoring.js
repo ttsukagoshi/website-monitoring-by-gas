@@ -204,7 +204,9 @@ function setupTrigger(handlerFunction, frequencyKey, frequencyUnit) {
 function deleteTimeBasedTriggers() {
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
-  const localMessage = new LocalizedMessage(ss.getSpreadsheetLocale());
+  const localMessage = new LocalizedMessage(
+    SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale()
+  );
   try {
     const continueResponse = ui.alert(
       localMessage.messageList.alertTitleContinueTriggerDelete,
