@@ -58,6 +58,8 @@ const MESSAGES = {
     alertTitleError: 'ERROR',
     errorHeaderNameTargetUrlNotFound:
       '"{{headerNameTargetUrl}}" is not found. Check the "{{sheetNameDashboard}}" worksheet for the header name of the target websites\' URL.',
+    errorAddTriggerWillBeDeleted:
+      "\nThis function's trigger has been deleted. Fix the error and set up the trigger again.",
     errorInconsistencyInHeader:
       'There seems to be an inconsistency in the header row between the status log files. Edit the header(s) so that they match and retry.',
     alertMessageLogExtractionComplete:
@@ -113,6 +115,8 @@ const MESSAGES = {
     alertTitleError: 'エラー',
     errorHeaderNameTargetUrlNotFound:
       '列「{{headerNameTargetUrl}}」が見つかりません。シート「{{sheetNameDashboard}}」にて、ステータス確認対象のウェブサイトURLが記載された列のヘッダ名を確認してください。',
+    errorAddTriggerWillBeDeleted:
+      '\nこの処理のトリガーはいったん削除されます。エラーを解決した上で、再度トリガーを設定し直してください。',
     errorInconsistencyInHeader:
       'ステータス確認のログファイルの間で、ヘッダ行に不整合があるようです。ヘッダ行が同一となるよう関係ファイルを編集・整形した上で、再度実行してください。',
     alertMessageLogExtractionComplete:

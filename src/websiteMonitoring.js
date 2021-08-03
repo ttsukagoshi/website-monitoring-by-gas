@@ -570,12 +570,21 @@ function extractStatusLogs(triggered = false) {
     const targetWebsiteUrls = targetWebsitesArr.map((row) => {
       let urlIndex = targetWebsitesHeader.indexOf(HEADER_NAME_TARGET_URL);
       if (urlIndex < 0) {
-        throw new Error(
-          localMessage.replaceErrorHeaderNameTargetUrlNotFound(
-            HEADER_NAME_TARGET_URL,
-            SHEET_NAME_DASHBOARD
-          )
+        let errorMessage = localMessage.replaceErrorHeaderNameTargetUrlNotFound(
+          HEADER_NAME_TARGET_URL,
+          SHEET_NAME_DASHBOARD
         );
+        if (triggered === true) {
+          ScriptApp.getProjectTriggers().forEach((trigger) => {
+            if (
+              ScriptApp.getHandlerFunction() === 'extractStatusLogsTriggered'
+            ) {
+              ScriptApp.deleteTrigger(trigger);
+            }
+          });
+          errorMessage += localMessage.messageList.errorAddTriggerWillBeDeleted;
+        }
+        throw new Error(errorMessage);
       }
       return row[urlIndex];
     });
@@ -649,7 +658,20 @@ function extractStatusLogs(triggered = false) {
     headersArr.forEach((headers) => {
       headers.forEach((header, i) => {
         if (header !== controlHeader[i]) {
-          throw new Error(localMessage.messageList.errorInconsistencyInHeader);
+          let errorMessage =
+            localMessage.messageList.errorInconsistencyInHeader;
+          if (triggered === true) {
+            ScriptApp.getProjectTriggers().forEach((trigger) => {
+              if (
+                ScriptApp.getHandlerFunction() === 'extractStatusLogsTriggered'
+              ) {
+                ScriptApp.deleteTrigger(trigger);
+              }
+            });
+            errorMessage +=
+              localMessage.messageList.errorAddTriggerWillBeDeleted;
+          }
+          throw new Error(errorMessage);
         }
       });
     });
