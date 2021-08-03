@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/* global LocalizedMessage */
 /* exported
 deleteTimeBasedTriggers,
 extractStatusLogsTriggered,
@@ -39,21 +40,38 @@ const OPTIONS_CONVERT_TO_ARRAY_KEYS = [
 ];
 // Document property key(s)
 const DP_KEY_SAVED_STATUS = 'savedStatus';
+// Wildcard value for response codes, e.g., 30x
+const RESPONSE_CODE_WILDCARD = 'x';
 
 function onOpen() {
+  const localMessage = new LocalizedMessage(
+    SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale()
+  );
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Web Status')
+  ui.createMenu(localMessage.messageList.menuTitle)
     .addSubMenu(
       ui
-        .createMenu('Triggers')
-        .addItem('Set Status Check Trigger', 'setupStatusCheckTrigger')
-        .addItem('Set Log Extraction Trigger', 'setupLogExtractionTrigger')
+        .createMenu(localMessage.messageList.menuTriggers)
+        .addItem(
+          localMessage.messageList.menuSetStatusCheckTrigger,
+          'setupStatusCheckTrigger'
+        )
+        .addItem(
+          localMessage.messageList.menuSetLogExtractionTrigger,
+          'setupLogExtractionTrigger'
+        )
         .addSeparator()
-        .addItem('Delete Triggers', 'deleteTimeBasedTriggers')
+        .addItem(
+          localMessage.messageList.menuDeleteTriggers,
+          'deleteTimeBasedTriggers'
+        )
     )
     .addSeparator()
-    .addItem('Check Status', 'websiteMonitoring')
-    .addItem('Extract Status Logs', 'extractStatusLogs')
+    .addItem(localMessage.messageList.menuCheckStatus, 'websiteMonitoring')
+    .addItem(
+      localMessage.messageList.menuExtractStatusLogs,
+      'extractStatusLogs'
+    )
     .addToUi();
 }
 
@@ -88,8 +106,10 @@ function setupLogExtractionTrigger() {
 function setupTrigger(handlerFunction, frequencyKey, frequencyUnit) {
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const localMessage = new LocalizedMessage(ss.getSpreadsheetLocale());
   // Parse options data from spreadsheet
-  const optionsArr = SpreadsheetApp.getActiveSpreadsheet()
+  const optionsArr = ss
     .getSheetByName(SHEET_NAME_OPTIONS)
     .getDataRange()
     .getValues();
@@ -108,26 +128,30 @@ function setupTrigger(handlerFunction, frequencyKey, frequencyUnit) {
       !Number.isInteger(options[frequencyKey])
     ) {
       throw new Error(
-        `Invalid ${frequencyKey} value. Check the "${SHEET_NAME_OPTIONS}" worksheet for its value.`
+        localMessage.replaceErrorInvalidFrequencyValue(
+          frequencyKey,
+          SHEET_NAME_OPTIONS
+        )
       );
     }
     // Brief descriptions of the handler functions
     const functionDesc = {
-      websiteMonitoringTriggered: ' to check website status',
+      websiteMonitoringTriggered:
+        localMessage.messageList.functionDescWebsiteMonitoringTriggered,
       extractStatusLogsTriggered:
-        ' to extract status logs into the managing spreadsheet',
+        localMessage.messageList.functionDescExtractStatusLogsTriggered,
     };
     // Confirm the user if they want to continue with the trigger setup.
-    const continueAlert = `Setting up new trigger${
-      functionDesc[handlerFunction] ? functionDesc[handlerFunction] : ''
-    }. \nThis process will delete existing trigger for this function that was set by ${myEmail}. Are you sure you want to continue?`;
     const continueResponse = ui.alert(
-      'Trigger Setup',
-      continueAlert,
+      localMessage.messageList.alertTitleContinueTriggerSetup,
+      localMessage.replaceAlertMessageContinueTriggerSetup(
+        functionDesc[handlerFunction] ? functionDesc[handlerFunction] : '',
+        myEmail
+      ),
       ui.ButtonSet.YES_NO_CANCEL
     );
     if (continueResponse !== ui.Button.YES) {
-      throw new Error('Trigger setup has been canceled.');
+      throw new Error(localMessage.messageList.errorTriggerSetupCanceled);
     }
     // Delete existing trigger for this function set by the user.
     ScriptApp.getProjectTriggers().forEach((trigger) => {
@@ -157,11 +181,16 @@ function setupTrigger(handlerFunction, frequencyKey, frequencyUnit) {
         .everyWeeks(options[frequencyKey])
         .create();
     } else {
-      throw new Error(`Invalid frequency unit: ${frequencyUnit}`);
+      throw new Error(
+        localMessage.replaceErrorInvalidFrequencyUnit(frequencyUnit)
+      );
     }
     ui.alert(
-      `Complete (${handlerFunction})`,
-      `Trigger set at ${options[frequencyKey]}-${frequencyUnit} interval.`,
+      localMessage.replaceAlertTitleCompleteTriggerSetup(handlerFunction),
+      localMessage.replaceAlertMessageCompleteTriggerSetup(
+        options[frequencyKey],
+        frequencyUnit
+      ),
       ui.ButtonSet.OK
     );
   } catch (e) {
@@ -175,21 +204,27 @@ function setupTrigger(handlerFunction, frequencyKey, frequencyUnit) {
 function deleteTimeBasedTriggers() {
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
+  const localMessage = new LocalizedMessage(
+    SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale()
+  );
   try {
-    const continueAlert = `Deleting all existing trigger(s) on this spreadsheet/script set by ${myEmail}. Are you sure you want to continue?`;
     const continueResponse = ui.alert(
-      'Deleting All Triggers',
-      continueAlert,
+      localMessage.messageList.alertTitleContinueTriggerDelete,
+      localMessage.replaceAlertMessageContinueTriggerDelete(myEmail),
       ui.ButtonSet.YES_NO_CANCEL
     );
     if (continueResponse !== ui.Button.YES) {
-      throw new Error('Trigger deletion has been canceled.');
+      throw new Error(localMessage.messageList.errorTriggerDeleteCanceled);
     }
     // Delete all existing triggers set by the user.
     ScriptApp.getProjectTriggers().forEach((trigger) =>
       ScriptApp.deleteTrigger(trigger)
     );
-    ui.alert('Complete', `Trigger(s) deleted.`, ui.ButtonSet.OK);
+    ui.alert(
+      localMessage.messageList.alertTitleComplete,
+      localMessage.messageList.alertMessageTriggerDelete,
+      ui.ButtonSet.OK
+    );
   } catch (e) {
     ui.alert(e.stack);
   }
@@ -211,6 +246,8 @@ function websiteMonitoring(triggered = false) {
   const myEmail = Session.getActiveUser().getEmail();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const timeZone = ss.getSpreadsheetTimeZone();
+  const spreadsheetLocale = ss.getSpreadsheetLocale();
+  const localMessage = new LocalizedMessage(spreadsheetLocale);
   const currentYear = Utilities.formatDate(new Date(), timeZone, 'yyyy');
   const dp = PropertiesService.getDocumentProperties();
   const savedStatus = dp.getProperty(DP_KEY_SAVED_STATUS)
@@ -317,13 +354,17 @@ function websiteMonitoring(triggered = false) {
   try {
     // Replace wildcards in options.ALLOWED_RESPONSE_CODES and options.ERROR_RESPONSE_CODES to actual codes
     options.ALLOWED_RESPONSE_CODES = parseResponseCodes_(
-      options.ALLOWED_RESPONSE_CODES
+      options.ALLOWED_RESPONSE_CODES,
+      RESPONSE_CODE_WILDCARD,
+      spreadsheetLocale
     );
     if (!options.ALLOWED_RESPONSE_CODES.includes('200')) {
       options.ALLOWED_RESPONSE_CODES.push('200');
     }
     options.ERROR_RESPONSE_CODES = parseResponseCodes_(
-      options.ERROR_RESPONSE_CODES
+      options.ERROR_RESPONSE_CODES,
+      RESPONSE_CODE_WILDCARD,
+      spreadsheetLocale
     );
     console.log(JSON.stringify(options)); //////////////////
     // Get the actual HTTP response codes
@@ -408,34 +449,38 @@ function websiteMonitoring(triggered = false) {
     if (statusChange.newErrors.length > 0) {
       MailApp.sendEmail(
         myEmail,
-        '[Website Status] Alert: Site DOWN',
-        `The following website(s) are DOWN:\n\n${statusChange.newErrors
-          .map(
-            (errorResponse) =>
-              `Site Name: ${errorResponse.websiteName}\nURL: ${errorResponse.targetUrl}\nResponse Code: ${errorResponse.responseCode}\nResponse Time: ${errorResponse.responseTime}\n`
-          )
-          .join(
-            '\n'
-          )}\n\n-----\nThis notice is managed by the following spreadsheet:\n${ss.getUrl()}`
+        localMessage.messageList.mailSubNewDown,
+        localMessage.replaceMailBodyNewDown(
+          statusChange.newErrors
+            .map(
+              (errorResponse) =>
+                `Site Name: ${errorResponse.websiteName}\nURL: ${errorResponse.targetUrl}\nResponse Code: ${errorResponse.responseCode}\nResponse Time: ${errorResponse.responseTime}\n`
+            )
+            .join('\n'),
+          ss.getUrl()
+        )
       );
     }
     if (statusChange.resolved.length > 0) {
       MailApp.sendEmail(
         myEmail,
-        '[Website Status] Notice: Site UP (Resolved)',
-        `The following website(s) that were DOWN are now UP:\n\n${statusChange.resolved
-          .map((resolvedResponse) => {
-            `Site Name: ${resolvedResponse.websiteName}\nURL: ${resolvedResponse.targetUrl}\nResponse Code: ${resolvedResponse.responseCode}\nResponse Time: ${resolvedResponse.responseTime}\n`;
-          })
-          .join(
-            '\n'
-          )}\n\n-----\nThis notice is managed by the following spreadsheet:\n${ss.getUrl()}`
+        localMessage.messageList.mailSubResolved,
+        localMessage.replaceMailBodyResolved(
+          statusChange.resolved
+            .map((resolvedResponse) => {
+              `Site Name: ${resolvedResponse.websiteName}\nURL: ${resolvedResponse.targetUrl}\nResponse Code: ${resolvedResponse.responseCode}\nResponse Time: ${resolvedResponse.responseTime}\n`;
+            })
+            .join('\n'),
+          ss.getUrl()
+        )
       );
     }
     // Log message
-    let completeMessage = 'Website status check is complete.';
+    let completeMessage =
+      localMessage.messageList.alertMessageCompleteStatusCheck;
     if (statusChange.newErrors.length > 0 || statusChange.resolved.length > 0) {
-      completeMessage += `\nChanges to website status have been emailed to ${myEmail}`;
+      completeMessage +=
+        localMessage.replaceAlertMessageCompleteStatusCheckAdd(myEmail);
       // Set a one-time trigger to update extracted status logs on the managing spreadsheet
       // that will fire 30 secs later.
       ScriptApp.newTrigger('extractStatusLogsTriggered')
@@ -454,7 +499,7 @@ function websiteMonitoring(triggered = false) {
     if (!triggered) {
       // Show UI message, if triggered = false, i.e., this function is executed manually.
       ui.alert(
-        '[Website Status] Complete: Status Check',
+        localMessage.messageList.alertTitleCompleteStatusCheck,
         completeMessage,
         ui.ButtonSet.OK
       );
@@ -471,13 +516,15 @@ function websiteMonitoring(triggered = false) {
     ]);
     MailApp.sendEmail(
       myEmail,
-      '[Website Status] Error: Status Check',
-      `${
-        e.stack
-      }\n\n-----\nThis notice is managed by the following spreadsheet:\n${ss.getUrl()}`
+      localMessage.messageList.mailSubErrorStatusCheck,
+      localMessage.replaceMailBodyErrorStatusCheck(e.stack, ss.getUrl())
     );
     if (!triggered) {
-      ui.alert('ERROR', e.stack, ui.ButtonSet.OK);
+      ui.alert(
+        localMessage.messageList.alertTitleError,
+        e.stack,
+        ui.ButtonSet.OK
+      );
     }
   }
 }
@@ -498,6 +545,7 @@ function extractStatusLogsTriggered() {
  */
 function extractStatusLogs(triggered = false) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const localMessage = new LocalizedMessage(ss.getSpreadsheetLocale());
   const timeZone = ss.getSpreadsheetTimeZone();
   if (!triggered) {
     var ui = SpreadsheetApp.getUi();
@@ -524,9 +572,21 @@ function extractStatusLogs(triggered = false) {
     const targetWebsiteUrls = targetWebsitesArr.map((row) => {
       let urlIndex = targetWebsitesHeader.indexOf(HEADER_NAME_TARGET_URL);
       if (urlIndex < 0) {
-        throw new Error(
-          `"${HEADER_NAME_TARGET_URL}" is not found. Check the "${SHEET_NAME_DASHBOARD}" worksheet for the header name of the target websites\' URL`
+        let errorMessage = localMessage.replaceErrorHeaderNameTargetUrlNotFound(
+          HEADER_NAME_TARGET_URL,
+          SHEET_NAME_DASHBOARD
         );
+        if (triggered === true) {
+          ScriptApp.getProjectTriggers().forEach((trigger) => {
+            if (
+              ScriptApp.getHandlerFunction() === 'extractStatusLogsTriggered'
+            ) {
+              ScriptApp.deleteTrigger(trigger);
+            }
+          });
+          errorMessage += localMessage.messageList.errorAddTriggerWillBeDeleted;
+        }
+        throw new Error(errorMessage);
       }
       return row[urlIndex];
     });
@@ -600,9 +660,20 @@ function extractStatusLogs(triggered = false) {
     headersArr.forEach((headers) => {
       headers.forEach((header, i) => {
         if (header !== controlHeader[i]) {
-          throw new Error(
-            'There seems to be an inconsistency in the header row between the status log files. Edit the header(s) so that they match and retry.'
-          );
+          let errorMessage =
+            localMessage.messageList.errorInconsistencyInHeader;
+          if (triggered === true) {
+            ScriptApp.getProjectTriggers().forEach((trigger) => {
+              if (
+                ScriptApp.getHandlerFunction() === 'extractStatusLogsTriggered'
+              ) {
+                ScriptApp.deleteTrigger(trigger);
+              }
+            });
+            errorMessage +=
+              localMessage.messageList.errorAddTriggerWillBeDeleted;
+          }
+          throw new Error(errorMessage);
         }
       });
     });
@@ -612,12 +683,19 @@ function extractStatusLogs(triggered = false) {
       .getRange(1, 1, statusLogs.length, statusLogs[0].length)
       .setValues(statusLogs);
     if (!triggered) {
-      ui.alert('Complete', 'Status Log Extraction', ui.ButtonSet.OK);
+      ui.alert(
+        localMessage.messageList.alertTitleComplete,
+        localMessage.replaceAlertMessageLogExtractionComplete(
+          options.EXTRACT_STATUS_LOGS_DAYS,
+          SHEET_NAME_STATUS_LOGS_EXTRACTED
+        ),
+        ui.ButtonSet.OK
+      );
     }
   } catch (e) {
     console.error(e.stack);
     if (!triggered) {
-      ui.alert(`[Website Status] Error: ${e.stack}`);
+      ui.alert(localMessage.replaceAlertMessageErrorInLogExtraction(e.stack));
     }
   }
 }
@@ -628,15 +706,19 @@ function extractStatusLogs(triggered = false) {
  * ["201", "300", "301", "302", "303", "304", "305", "306", "307", "308", "309"]
  * @param {Array} codes An array of HTTP response codes in strings. Wildcards can be used to replace digits.
  * @param {String} wildcard Placeholder value to denote the digits from 0 to 9. Defaults to "x".
+ * @param {String} locale Locale of the user or spreadsheet. Defaults to the user's locale settings.
  * @returns {Array} An array of replaced codes.
  */
-function parseResponseCodes_(codes, wildcard = 'x') {
+function parseResponseCodes_(
+  codes,
+  wildcard = 'x',
+  locale = Session.getActiveUserLocale()
+) {
+  let localMessage = new LocalizedMessage(locale);
   return codes
     .map((code) => {
       if (code.length !== 3 && code.length !== 0) {
-        throw new Error(
-          `Invalid response code "${code}" at ALLOWED_RESPONSE_CODES`
-        );
+        throw new Error(localMessage.replaceErrorInvalidResponseCode(code));
       }
       let parsedCodes = [];
       let remainingWildcard = 0;
@@ -652,7 +734,7 @@ function parseResponseCodes_(codes, wildcard = 'x') {
         parsedCodes.push(code);
       }
       if (remainingWildcard > 0) {
-        parsedCodes = parseResponseCodes_(parsedCodes, wildcard);
+        parsedCodes = parseResponseCodes_(parsedCodes, wildcard, locale);
       }
       return parsedCodes.flat();
     })
