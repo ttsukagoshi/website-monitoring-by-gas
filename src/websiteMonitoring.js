@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// See https://www.scriptable-assets.page/gas-solutions/website-monitoring-by-gas/ for latest updates.
+
 /* global LocalizedMessage */
 /* exported
 deleteTimeBasedTriggers,
@@ -538,11 +540,26 @@ function websiteMonitoring(triggered = false) {
       0,
       'NA',
     ]);
-    MailApp.sendEmail(
-      myEmail,
-      localMessage.messageList.mailSubErrorStatusCheck,
-      localMessage.replaceMailBodyErrorStatusCheck(e.stack, ss.getUrl())
+    let messageSub = localMessage.messageList.mailSubErrorStatusCheck;
+    let messageBody = localMessage.replaceMailBodyErrorStatusCheck(
+      e.stack,
+      ss.getUrl()
     );
+    if (options.ENABLE_CHAT_NOTIFICATION) {
+      // Post on Google Chat
+      postToChat_(
+        options.CHAT_WEBHOOK_URL,
+        `*${messageSub}*\n\n${messageBody}`
+      );
+    }
+    if (
+      !options.ENABLE_CHAT_NOTIFICATION ||
+      !options.DISABLE_MAIL_NOTIFICATION
+    ) {
+      // If chat notification is disabled OR mail notification is NOT disabled
+      // send email notification
+      MailApp.sendEmail(myEmail, messageSub, messageBody);
+    }
     if (!triggered) {
       ui.alert(
         localMessage.messageList.alertTitleError,

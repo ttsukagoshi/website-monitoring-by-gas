@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// See https://www.scriptable-assets.page/gas-solutions/website-monitoring-by-gas/ for latest updates.
+
 /* exported LocalizedMessage */
 
 const MESSAGES = {
