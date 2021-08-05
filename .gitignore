@@ -1,5 +1,6 @@
 # clasp
 .clasp.json
+src/debug_.js
 # node
 node_modules/
 # misc
