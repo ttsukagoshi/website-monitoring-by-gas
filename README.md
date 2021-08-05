@@ -14,25 +14,7 @@ Copy [this sample spreadsheet](https://docs.google.com/spreadsheets/d/1JvO090Vcg
 
 ## How to Use
 
-### Setup
-
-#### `01_Dashboard` Worksheet
-
-Replace the `WEBSITE NAME` and `TARGET URL` columns with those of the website(s) that you want to monitor.
-
-#### `90_Spreadsheets` Worksheet
-
-Delete everything **except the first row**.
-
-#### `99_Options` Worksheet
-
-Go over the parameters that you can set for this status monitoring and edit the `VALUE` items to suit you needs.
-
-#### Set Triggers
-
-From the spreadsheet menu, select `Web Status` > `Triggers` > `Set Status Check Trigger`/`Set Log Extraction Trigger` to set up time-based triggers to conduct automated status checks. The latest results will be shown in the `01_Dashboard` worksheet.
-
-You will be asked to authorized the script the first time you execute it. Users of free Gmail account should expect to see the `Unverified` warning during this authorization process. Note that the owner of the script is yourself, and that this solution will not send or receive any information to and from any other Google accounts or services outside the Google ecosystem (except for checking the HTTP response codes of the websites that you designated because, well, that's what it does for status monitoring) unless you explicitly share the spreadsheet.
+See [website](https://www.scriptable-assets.page/gas-solutions/website-monitoring-by-gas/) for details on how to use this solution.
 
 ## Updates
 
