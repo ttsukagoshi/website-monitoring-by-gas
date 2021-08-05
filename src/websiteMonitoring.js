@@ -478,7 +478,7 @@ function websiteMonitoring(triggered = false) {
       let messageBody = localMessage.replaceMailBodyResolved(
         statusChange.resolved
           .map((resolvedResponse) => {
-            `Site Name: ${resolvedResponse.websiteName}\nURL: ${resolvedResponse.targetUrl}\nResponse Code: ${resolvedResponse.responseCode}\nResponse Time: ${resolvedResponse.responseTime}\n`;
+            return `Site Name: ${resolvedResponse.websiteName}\nURL: ${resolvedResponse.targetUrl}\nResponse Code: ${resolvedResponse.responseCode}\nResponse Time: ${resolvedResponse.responseTime}\n`;
           })
           .join('\n'),
         ss.getUrl()
