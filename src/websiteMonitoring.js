@@ -447,33 +447,57 @@ function websiteMonitoring(triggered = false) {
     dp.setProperty(DP_KEY_SAVED_STATUS, JSON.stringify(savedStatusUpdated));
     // Update dashboard info
     if (statusChange.newErrors.length > 0) {
-      MailApp.sendEmail(
-        myEmail,
-        localMessage.messageList.mailSubNewDown,
-        localMessage.replaceMailBodyNewDown(
-          statusChange.newErrors
-            .map(
-              (errorResponse) =>
-                `Site Name: ${errorResponse.websiteName}\nURL: ${errorResponse.targetUrl}\nResponse Code: ${errorResponse.responseCode}\nResponse Time: ${errorResponse.responseTime}\n`
-            )
-            .join('\n'),
-          ss.getUrl()
-        )
+      let messageSub = localMessage.messageList.mailSubNewDown;
+      let messageBody = localMessage.replaceMailBodyNewDown(
+        statusChange.newErrors
+          .map(
+            (errorResponse) =>
+              `Site Name: ${errorResponse.websiteName}\nURL: ${errorResponse.targetUrl}\nResponse Code: ${errorResponse.responseCode}\nResponse Time: ${errorResponse.responseTime}\n`
+          )
+          .join('\n'),
+        ss.getUrl()
       );
+      if (options.ENABLE_CHAT_NOTIFICATION) {
+        // Post on Google Chat
+        postToChat_(
+          options.CHAT_WEBHOOK_URL,
+          `*${messageSub}*\n\n${messageBody}`
+        );
+      }
+      if (
+        !options.ENABLE_CHAT_NOTIFICATION ||
+        !options.DISABLE_MAIL_NOTIFICATION
+      ) {
+        // If chat notification is disabled OR mail notification is NOT disabled
+        // send email notification
+        MailApp.sendEmail(myEmail, messageSub, messageBody);
+      }
     }
     if (statusChange.resolved.length > 0) {
-      MailApp.sendEmail(
-        myEmail,
-        localMessage.messageList.mailSubResolved,
-        localMessage.replaceMailBodyResolved(
-          statusChange.resolved
-            .map((resolvedResponse) => {
-              `Site Name: ${resolvedResponse.websiteName}\nURL: ${resolvedResponse.targetUrl}\nResponse Code: ${resolvedResponse.responseCode}\nResponse Time: ${resolvedResponse.responseTime}\n`;
-            })
-            .join('\n'),
-          ss.getUrl()
-        )
+      let messageSub = localMessage.messageList.mailSubResolved;
+      let messageBody = localMessage.replaceMailBodyResolved(
+        statusChange.resolved
+          .map((resolvedResponse) => {
+            return `Site Name: ${resolvedResponse.websiteName}\nURL: ${resolvedResponse.targetUrl}\nResponse Code: ${resolvedResponse.responseCode}\nResponse Time: ${resolvedResponse.responseTime}\n`;
+          })
+          .join('\n'),
+        ss.getUrl()
       );
+      if (options.ENABLE_CHAT_NOTIFICATION) {
+        // Post on Google Chat
+        postToChat_(
+          options.CHAT_WEBHOOK_URL,
+          `*${messageSub}*\n\n${messageBody}`
+        );
+      }
+      if (
+        !options.ENABLE_CHAT_NOTIFICATION ||
+        !options.DISABLE_MAIL_NOTIFICATION
+      ) {
+        // If chat notification is disabled OR mail notification is NOT disabled
+        // send email notification
+        MailApp.sendEmail(myEmail, messageSub, messageBody);
+      }
     }
     // Log message
     let completeMessage =
@@ -752,4 +776,19 @@ function standardFormatDate_(
   timeZone = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone()
 ) {
   return Utilities.formatDate(dateObj, timeZone, 'yyyy-MM-dd HH:mm:ss');
+}
+
+/**
+ * Send message to the designated Google Chat using its webhook.
+ * @param {String} chatUrl Webhook URL of Google Chat conversation or chatroom.
+ * @param {*} chatText The chat message in simple text. https://developers.google.com/chat/reference/message-formats/basic
+ */
+function postToChat_(chatUrl, chatText) {
+  UrlFetchApp.fetch(chatUrl, {
+    method: 'POST',
+    contentType: 'application/json; charset=UTF-8',
+    payload: JSON.stringify({
+      text: chatText,
+    }),
+  });
 }
