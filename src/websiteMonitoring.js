@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// See https://www.scriptable-assets.page/gas-solutions/website-monitoring-by-gas/ for latest updates.
+
 /* global LocalizedMessage */
 /* exported
 deleteTimeBasedTriggers,
@@ -24,15 +26,15 @@ websiteMonitoringTriggered
 
 // Sheet Names
 const SHEET_NAME_DASHBOARD = '01_Dashboard';
+const SHEET_NAME_LATEST_STATUS = '80_Latest Status';
+const SHEET_NAME_STATUS_LOGS_EXTRACTED = '81_Status Logs Extracted';
 const SHEET_NAME_SPREADSHEETS = '90_Spreadsheets';
-const SHEET_NAME_STATUS_LOGS_EXTRACTED = '91_Status Logs Extracted';
 const SHEET_NAME_OPTIONS = '99_Options';
 // Header Names
 const HEADER_NAME_TARGET_URL = 'TARGET URL';
 // Range parameters of the list of target websites in SHEET_NAME_DASHBOARD.
 const TARGET_WEBSITES_RANGE_POSITION = { row: 5, col: 2 }; // Position of the upper- and left-most cell including the header row
 const TARGET_WEBSITES_COL_NUM = 2; // Number of fields names (columns) in the list of target websites
-const DASHBOARD_STATUS_COL_NUM = 3; // Number of fields names (columns) in the dashboard status ranges, adjacent to the list of target websites
 // Keys in SHEET_NAME_OPTIONS whose value should be converted to arrays
 const OPTIONS_CONVERT_TO_ARRAY_KEYS = [
   'ALLOWED_RESPONSE_CODES',
@@ -413,35 +415,34 @@ function websiteMonitoring(triggered = false) {
           responseRecord.status = 'DOWN';
           changes.newErrors.push(responseRecord);
         }
-        // Log result to the log spreadsheet
-        logSheet.appendRow([
-          responseRecord.timeStamp,
+        // Latest status data for updating the log spreadsheet and the worksheet on latest statuses
+        let latestStatus = [
           responseRecord.websiteName,
           responseRecord.targetUrl,
           responseRecord.responseCode,
           responseRecord.responseTime,
           responseRecord.status,
-        ]);
-        // Updates to the dashboard worksheet
-        dashboardStatus.push([
-          responseRecord.status,
-          responseRecord.responseCode,
           responseRecord.timeStamp,
-        ]);
+        ];
+        logSheet.appendRow(latestStatus);
+        dashboardStatus.push(latestStatus);
         // Update savedStatusUpdated
         savedStatusUpdated[responseRecord.targetUrlEncoded] = responseRecord;
         return changes;
       },
       { newErrors: [], resolved: [] }
     );
-    // Update the dashboard status
-    targetWebsitesSheet
-      .getRange(
-        TARGET_WEBSITES_RANGE_POSITION.row + 1,
-        TARGET_WEBSITES_RANGE_POSITION.col + TARGET_WEBSITES_COL_NUM,
-        dashboardStatus.length,
-        DASHBOARD_STATUS_COL_NUM
-      )
+    // Update the worksheet on latest statuses
+    let latestStatusSheet = ss.getSheetByName(SHEET_NAME_LATEST_STATUS);
+    let existingStatusHeader = latestStatusSheet
+      .getDataRange()
+      .getValues()
+      .shift();
+    latestStatusSheet.getDataRange().clearContent();
+    dashboardStatus = [existingStatusHeader].concat(dashboardStatus);
+    console.log(dashboardStatus);
+    latestStatusSheet
+      .getRange(1, 1, dashboardStatus.length, dashboardStatus[0].length)
       .setValues(dashboardStatus);
     // Save the updated savedStatusUpdated in the document properties
     dp.setProperty(DP_KEY_SAVED_STATUS, JSON.stringify(savedStatusUpdated));
@@ -538,11 +539,26 @@ function websiteMonitoring(triggered = false) {
       0,
       'NA',
     ]);
-    MailApp.sendEmail(
-      myEmail,
-      localMessage.messageList.mailSubErrorStatusCheck,
-      localMessage.replaceMailBodyErrorStatusCheck(e.stack, ss.getUrl())
+    let messageSub = localMessage.messageList.mailSubErrorStatusCheck;
+    let messageBody = localMessage.replaceMailBodyErrorStatusCheck(
+      e.stack,
+      ss.getUrl()
     );
+    if (options.ENABLE_CHAT_NOTIFICATION) {
+      // Post on Google Chat
+      postToChat_(
+        options.CHAT_WEBHOOK_URL,
+        `*${messageSub}*\n\n${messageBody}`
+      );
+    }
+    if (
+      !options.ENABLE_CHAT_NOTIFICATION ||
+      !options.DISABLE_MAIL_NOTIFICATION
+    ) {
+      // If chat notification is disabled OR mail notification is NOT disabled
+      // send email notification
+      MailApp.sendEmail(myEmail, messageSub, messageBody);
+    }
     if (!triggered) {
       ui.alert(
         localMessage.messageList.alertTitleError,
