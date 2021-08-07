@@ -19,7 +19,9 @@
 deleteTimeBasedTriggers,
 extractStatusLogsTriggered,
 onOpen,
+sendReminder,
 setupLogExtractionTrigger,
+setupReminderTrigger,
 setupStatusCheckTrigger,
 websiteMonitoringTriggered
 */
@@ -62,6 +64,10 @@ function onOpen() {
           localMessage.messageList.menuSetLogExtractionTrigger,
           'setupLogExtractionTrigger'
         )
+        .addItem(
+          localMessage.messageList.menuSetReminderTrigger,
+          'setupReminderTrigger'
+        )
         .addSeparator()
         .addItem(
           localMessage.messageList.menuDeleteTriggers,
@@ -84,7 +90,7 @@ function setupStatusCheckTrigger() {
   const handlerFunction = 'websiteMonitoringTriggered';
   const frequencyKey = 'TRIGGER_MINUTE_FREQUENCY_STATUS_CHECK';
   const frequencyUnit = 'minute';
-  setupTrigger(handlerFunction, frequencyKey, frequencyUnit);
+  setupTrigger_(handlerFunction, frequencyKey, frequencyUnit);
 }
 
 /**
@@ -95,7 +101,7 @@ function setupLogExtractionTrigger() {
   const handlerFunction = 'extractStatusLogsTriggered';
   const frequencyKey = 'TRIGGER_DAYS_FREQUENCY_LOG_EXTRACTION';
   const frequencyUnit = 'day';
-  setupTrigger(handlerFunction, frequencyKey, frequencyUnit);
+  setupTrigger_(handlerFunction, frequencyKey, frequencyUnit);
 }
 
 /**
@@ -105,7 +111,7 @@ function setupLogExtractionTrigger() {
  * @param {String} frequencyKey Key in the options sheet that refers to the trigger frequency for this handler function.
  * @param {String} frequencyUnit Unit of the value of frequencyKey, i.e., minute, hour, day, or week.
  */
-function setupTrigger(handlerFunction, frequencyKey, frequencyUnit) {
+function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -198,6 +204,24 @@ function setupTrigger(handlerFunction, frequencyKey, frequencyUnit) {
   } catch (e) {
     ui.alert(e.stack);
   }
+}
+
+/**
+ * Set time-based trigger for sending monthly reminders
+ * of active time-based triggers set by this user in this script.
+ * Trigger will be set for the first day of each month.
+ */
+function setupReminderTrigger() {
+  // UI alert message ///////
+  const handlerFunction = 'sendReminder';
+  // Delete existing trigger for the same handler function.
+  ScriptApp.getProjectTriggers().forEach((trigger) => {
+    if (trigger.getHandlerFunction() === handlerFunction) {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+  // Set new trigger
+  ScriptApp.newTrigger(handlerFunction).timeBased().onMonthDay(1).create();
 }
 
 /**
@@ -540,10 +564,7 @@ function websiteMonitoring(triggered = false) {
       'NA',
     ]);
     let messageSub = localMessage.messageList.mailSubErrorStatusCheck;
-    let messageBody = localMessage.replaceMailBodyErrorStatusCheck(
-      e.stack,
-      ss.getUrl()
-    );
+    let messageBody = localMessage.replaceMailBodyError(e.stack, ss.getUrl());
     if (options.ENABLE_CHAT_NOTIFICATION) {
       // Post on Google Chat
       postToChat_(
@@ -736,6 +757,83 @@ function extractStatusLogs(triggered = false) {
     console.error(e.stack);
     if (!triggered) {
       ui.alert(localMessage.replaceAlertMessageErrorInLogExtraction(e.stack));
+    }
+  }
+}
+
+function sendReminder() {
+  const triggers = ScriptApp.getProjectTriggers();
+  if (triggers.length > 0) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const localMessage = new LocalizedMessage(ss.getSpreadsheetLocale());
+    const myEmail = Session.getActiveUser().getEmail();
+    // Parse options data from spreadsheet
+    const optionsArr = ss
+      .getSheetByName(SHEET_NAME_OPTIONS)
+      .getDataRange()
+      .getValues();
+    optionsArr.shift();
+    const options = optionsArr.reduce((obj, row) => {
+      let [key, value] = [row[1], row[2]]; // Assuming that the keys and their options are set in columns B and C, respectively.
+      if (key) {
+        obj[key] = value;
+      }
+      return obj;
+    }, {});
+    var messageSub = '[Website Status] ';
+    var messageBody = '';
+    try {
+      messageSub += 'Reminder: Active Triggers';
+      let triggerInfo = triggers
+        .reduce((info, trigger) => {
+          if (trigger.getHandlerFunction() === 'websiteMonitoringTriggered') {
+            // Get the list of target websites to monitor
+            const targetWebsitesSheet = ss.getSheetByName(SHEET_NAME_DASHBOARD);
+            const targetWebsitesArr = targetWebsitesSheet
+              .getRange(
+                TARGET_WEBSITES_RANGE_POSITION.row,
+                TARGET_WEBSITES_RANGE_POSITION.col,
+                targetWebsitesSheet.getLastRow() -
+                  TARGET_WEBSITES_RANGE_POSITION.row +
+                  1,
+                TARGET_WEBSITES_COL_NUM
+              )
+              .getValues();
+            targetWebsitesArr.shift();
+            info.push(
+              `Website Monitoring:\n${targetWebsitesArr
+                .map((website) => `- ${website.join(' ')}`)
+                .join('\n')}`
+            );
+          } else if (
+            trigger.getHandlerFunction() === 'extractStatusLogsTriggered'
+          ) {
+            info.push('Trigger for periodical status log extraction is set.');
+          }
+          return info;
+        }, [])
+        .join('\n');
+      messageBody = `This is a monthly reminder of the time-based triggers set for this website monitoring script:\n\n${triggerInfo}\n\n-----\nThis notice is managed by the following spreadsheet:\n${ss.getUrl()}`; //////
+    } catch (e) {
+      console.error(e.stack);
+      messageSub = '[Website Status] Error: Send Reminder'; // localMessage.messageList.mailSubErrorSendReminder;
+      messageBody = localMessage.replaceMailBodyError(e.stack, ss.getUrl());
+    } finally {
+      if (options.ENABLE_CHAT_NOTIFICATION) {
+        // Post on Google Chat
+        postToChat_(
+          options.CHAT_WEBHOOK_URL,
+          `*${messageSub}*\n\n${messageBody}`
+        );
+      }
+      if (
+        !options.ENABLE_CHAT_NOTIFICATION ||
+        !options.DISABLE_MAIL_NOTIFICATION
+      ) {
+        // If chat notification is disabled OR mail notification is NOT disabled
+        // send email notification
+        MailApp.sendEmail(myEmail, messageSub, messageBody);
+      }
     }
   }
 }
