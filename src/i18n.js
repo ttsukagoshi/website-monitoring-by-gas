@@ -22,6 +22,7 @@ const MESSAGES = {
     menuTriggers: 'Triggers',
     menuSetStatusCheckTrigger: 'Set Status Check Trigger',
     menuSetLogExtractionTrigger: 'Set Log Extraction Trigger',
+    menuSetReminderTrigger: 'Set Reminder Trigger',
     menuDeleteTriggers: 'Delete Triggers',
     menuCheckStatus: 'Check Status',
     menuExtractStatusLogs: 'Extract Status Logs',
@@ -55,7 +56,7 @@ const MESSAGES = {
       '\nChanges to website status have been emailed to {{myEmail}}',
     alertTitleCompleteStatusCheck: '[Website Status] Complete: Status Check',
     mailSubErrorStatusCheck: '[Website Status] Error: Status Check',
-    mailBodyErrorStatusCheck:
+    mailBodyError:
       '{{errorStack}}\n\n-----\nThis notice is managed by the following spreadsheet:\n{{spreadsheetUrl}}',
     alertTitleError: 'ERROR',
     errorHeaderNameTargetUrlNotFound:
@@ -112,7 +113,7 @@ const MESSAGES = {
     alertTitleCompleteStatusCheck:
       '[サイト公開ステータス] 完了：ステータス確認',
     mailSubErrorStatusCheck: '[サイト公開ステータス] エラー：ステータス確認',
-    mailBodyErrorStatusCheck:
+    mailBodyError:
       '{{errorStack}}\n\n-----\nこの通知は次のGoogleスプレッドシートによって管理されています：\n{{spreadsheetUrl}}',
     alertTitleError: 'エラー',
     errorHeaderNameTargetUrlNotFound:
@@ -324,13 +325,13 @@ class LocalizedMessage {
     return text;
   }
   /**
-   * Replace placeholder string in this.messageList.mailBodyErrorStatusCheck
+   * Replace placeholder string in this.messageList.mailBodyError
    * @param {String} errorStack
    * @param {String} spreadsheetUrl
    * @returns {String} The replaced text.
    */
-  replaceMailBodyErrorStatusCheck(errorStack, spreadsheetUrl) {
-    let text = this.messageList.mailBodyErrorStatusCheck;
+  replaceMailBodyError(errorStack, spreadsheetUrl) {
+    let text = this.messageList.mailBodyError;
     let placeholderValues = [
       {
         regexp: '{{errorStack}}',
