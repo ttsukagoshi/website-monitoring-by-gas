@@ -194,6 +194,8 @@ function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
         localMessage.replaceErrorInvalidFrequencyUnit(frequencyUnit)
       );
     }
+    // Set up a trigger for monthly reminders
+    setupReminderTrigger(true);
     console.info('[setupTrigger_] Trigger set up complete.');
     ui.alert(
       localMessage.replaceAlertTitleCompleteTriggerSetup(handlerFunction),
@@ -213,12 +215,15 @@ function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
  * Set time-based trigger for sending monthly reminders
  * of active time-based triggers set by this user in this script.
  * Trigger will be set for the first day of each month.
+ * @param {Boolean} muteUi Will not show any UI alerts when true. Defaults to false.
  */
-function setupReminderTrigger() {
+function setupReminderTrigger(muteUi = false) {
   console.info(
     '[setupReminderTrigger] Setting trigger for the monthly reminder...'
   );
-  const ui = SpreadsheetApp.getUi();
+  if (!muteUi) {
+    var ui = SpreadsheetApp.getUi();
+  }
   const localMessage = new LocalizedMessage(
     SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale()
   );
@@ -233,16 +238,22 @@ function setupReminderTrigger() {
     // Set new trigger
     ScriptApp.newTrigger(handlerFunction).timeBased().onMonthDay(1).create();
     console.info('[setupReminderTrigger] Trigger set up complete.');
-    ui.alert(
-      localMessage.replaceAlertTitleCompleteTriggerSetup(handlerFunction),
-      localMessage.replaceAlertMessageCompleteReminderTriggerSetup(
-        Session.getActiveUser().getEmail()
-      ),
-      ui.ButtonSet.OK
-    );
+    if (!muteUi) {
+      ui.alert(
+        localMessage.replaceAlertTitleCompleteTriggerSetup(handlerFunction),
+        localMessage.replaceAlertMessageCompleteReminderTriggerSetup(
+          Session.getActiveUser().getEmail()
+        ),
+        ui.ButtonSet.OK
+      );
+    }
   } catch (e) {
     console.error(e.stack);
-    ui.alert(e.stack);
+    if (!muteUi) {
+      ui.alert(e.stack);
+    } else {
+      throw e;
+    }
   }
 }
 
