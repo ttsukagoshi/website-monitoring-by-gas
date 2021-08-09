@@ -22,6 +22,7 @@ const MESSAGES = {
     menuTriggers: 'Triggers',
     menuSetStatusCheckTrigger: 'Set Status Check Trigger',
     menuSetLogExtractionTrigger: 'Set Log Extraction Trigger',
+    menuSetReminderTrigger: 'Set Reminder Trigger',
     menuDeleteTriggers: 'Delete Triggers',
     menuCheckStatus: 'Check Status',
     menuExtractStatusLogs: 'Extract Status Logs',
@@ -38,6 +39,8 @@ const MESSAGES = {
     alertTitleCompleteTriggerSetup: 'Complete ({{handlerFunction}})',
     alertMessageCompleteTriggerSetup:
       'Trigger set at {{frequency}}-{{frequencyUnit}} interval.',
+    alertMessageCompleteReminderTriggerSetup:
+      'Monthly reminder to notify {{myEmail}} of the website status settings is now set up. You will be notified of the monitoring status on the first day of each month.',
     alertTitleContinueTriggerDelete: 'Deleting All Triggers',
     alertMessageContinueTriggerDelete:
       'Deleting all existing trigger(s) on this spreadsheet/script set by {{myEmail}}. Are you sure you want to continue?',
@@ -55,7 +58,7 @@ const MESSAGES = {
       '\nChanges to website status have been emailed to {{myEmail}}',
     alertTitleCompleteStatusCheck: '[Website Status] Complete: Status Check',
     mailSubErrorStatusCheck: '[Website Status] Error: Status Check',
-    mailBodyErrorStatusCheck:
+    mailBodyError:
       '{{errorStack}}\n\n-----\nThis notice is managed by the following spreadsheet:\n{{spreadsheetUrl}}',
     alertTitleError: 'ERROR',
     errorHeaderNameTargetUrlNotFound:
@@ -70,12 +73,21 @@ const MESSAGES = {
       '[Website Status] Error in Status Log Extraction:\n{{errorStack}}',
     errorInvalidResponseCode:
       'Invalid response code "{{code}}" at ALLOWED_RESPONSE_CODES or ERROR_RESPONSE_CODES.',
+    mailSubSendReminderPrefix: '[Website Status] ',
+    mailSubSendReminder: 'Reminder: Active Triggers',
+    mailBodySendReminder:
+      'This is a monthly reminder, sent automatically, of the time-based triggers set for this website monitoring script:\n\n{{triggerInfo}}\nSee the managing spreadsheet for details on the latest website status.\n\n-----\nThis notice is managed by the following spreadsheet:\n{{spreadsheetUrl}}',
+    mailSubErrorSendReminder: 'Error: Send Reminder',
+    messageMonitoredSitesPrefix: 'Monitored Websites',
+    messageTriggerLogExtractionIsSet:
+      'Trigger for periodical status log extraction is set.',
   },
   ja_JP: {
     menuTitle: 'サイト公開ステータス',
     menuTriggers: 'トリガー',
     menuSetStatusCheckTrigger: 'トリガー設定（ステータス確認）',
     menuSetLogExtractionTrigger: 'トリガー設定（ログ抽出）',
+    menuSetReminderTrigger: 'トリガー設定（リマインダー）',
     menuDeleteTriggers: 'トリガー削除',
     menuCheckStatus: 'ステータス確認',
     menuExtractStatusLogs: '確認ログを抽出',
@@ -93,6 +105,8 @@ const MESSAGES = {
     alertTitleCompleteTriggerSetup: '完了（{{handlerFunction}}）',
     alertMessageCompleteTriggerSetup:
       'トリガー設定完了：{{frequency}}-{{frequencyUnit}}間隔.',
+    alertMessageCompleteReminderTriggerSetup:
+      '{{myEmail}}宛にサイト公開ステータス監視の設定状況をリマインドするトリガーの設定が完了しました。毎月1日に、公開監視状況の設定が通知されます。',
     alertTitleContinueTriggerDelete: '全てのトリガーを削除します',
     alertMessageContinueTriggerDelete:
       'このスプレッドシート/スクリプトで {{myEmail}} によって設定された全てのトリガーを削除します。このまま続けますか？',
@@ -112,7 +126,7 @@ const MESSAGES = {
     alertTitleCompleteStatusCheck:
       '[サイト公開ステータス] 完了：ステータス確認',
     mailSubErrorStatusCheck: '[サイト公開ステータス] エラー：ステータス確認',
-    mailBodyErrorStatusCheck:
+    mailBodyError:
       '{{errorStack}}\n\n-----\nこの通知は次のGoogleスプレッドシートによって管理されています：\n{{spreadsheetUrl}}',
     alertTitleError: 'エラー',
     errorHeaderNameTargetUrlNotFound:
@@ -127,6 +141,14 @@ const MESSAGES = {
       '[サイト公開ステータス] ログ抽出エラー：\n{{errorStack}}',
     errorInvalidResponseCode:
       '無効なレスポンスコード「{{code}}」が ALLOWED_RESPONSE_CODES または ERROR_RESPONSE_CODES にて指定されています。',
+    mailSubSendReminderPrefix: '[サイト公開ステータス] ',
+    mailSubSendReminder: 'リマインダー：設定されているトリガー',
+    mailBodySendReminder:
+      'これは、サイト公開ステータス監視のトリガー設定状況をお知らせするため、毎月1日に自動的に送信されるリマインダーです。\n\n{{triggerInfo}}\n最新のサイト公開ステータスについては、管理スプレッドシートをご確認ください。\n\n-----\nこの通知は次のGoogleスプレッドシートによって管理されています：\n{{spreadsheetUrl}}',
+    mailSubErrorSendReminder: 'エラー：リマインダー送信',
+    messageMonitoredSitesPrefix: '公開ステータスの監視対象サイト',
+    messageTriggerLogExtractionIsSet:
+      '公開ステータスログを定期的に抽出するトリガーが設定されています。',
   },
 };
 
@@ -324,13 +346,13 @@ class LocalizedMessage {
     return text;
   }
   /**
-   * Replace placeholder string in this.messageList.mailBodyErrorStatusCheck
+   * Replace placeholder string in this.messageList.mailBodyError
    * @param {String} errorStack
    * @param {String} spreadsheetUrl
    * @returns {String} The replaced text.
    */
-  replaceMailBodyErrorStatusCheck(errorStack, spreadsheetUrl) {
-    let text = this.messageList.mailBodyErrorStatusCheck;
+  replaceMailBodyError(errorStack, spreadsheetUrl) {
+    let text = this.messageList.mailBodyError;
     let placeholderValues = [
       {
         regexp: '{{errorStack}}',
@@ -419,6 +441,43 @@ class LocalizedMessage {
       {
         regexp: '{{code}}',
         value: code,
+      },
+    ];
+    text = this.replacePlaceholders_(text, placeholderValues);
+    return text;
+  }
+  /**
+   * Replace placeholder string in this.messageList.alertMessageCompleteReminderTriggerSetup
+   * @param {String} myEmail
+   * @returns {String} The replaced text.
+   */
+  replaceAlertMessageCompleteReminderTriggerSetup(myEmail) {
+    let text = this.messageList.alertMessageCompleteReminderTriggerSetup;
+    let placeholderValues = [
+      {
+        regexp: '{{myEmail}}',
+        value: myEmail,
+      },
+    ];
+    text = this.replacePlaceholders_(text, placeholderValues);
+    return text;
+  }
+  /**
+   * Replace placeholder string in this.messageList.mailBodySendReminder
+   * @param {String} triggerInfo
+   * @param {String} spreadsheetUrl
+   * @returns {String} The replaced text.
+   */
+  replaceMailBodySendReminder(triggerInfo, spreadsheetUrl) {
+    let text = this.messageList.mailBodySendReminder;
+    let placeholderValues = [
+      {
+        regexp: '{{triggerInfo}}',
+        value: triggerInfo,
+      },
+      {
+        regexp: '{{spreadsheetUrl}}',
+        value: spreadsheetUrl,
       },
     ];
     text = this.replacePlaceholders_(text, placeholderValues);
