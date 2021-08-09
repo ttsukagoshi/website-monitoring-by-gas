@@ -212,7 +212,10 @@ function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
  * Trigger will be set for the first day of each month.
  */
 function setupReminderTrigger() {
-  // UI alert message ///////
+  const ui = SpreadsheetApp.getUi();
+  const localMessage = new LocalizedMessage(
+    SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale()
+  );
   const handlerFunction = 'sendReminder';
   // Delete existing trigger for the same handler function.
   ScriptApp.getProjectTriggers().forEach((trigger) => {
@@ -222,6 +225,13 @@ function setupReminderTrigger() {
   });
   // Set new trigger
   ScriptApp.newTrigger(handlerFunction).timeBased().onMonthDay(1).create();
+  ui.alert(
+    localMessage.replaceAlertTitleCompleteTriggerSetup(handlerFunction),
+    localMessage.replaceAlertMessageCompleteReminderTriggerSetup(
+      Session.getActiveUser().getEmail()
+    ),
+    ui.ButtonSet.OK
+  );
 }
 
 /**
@@ -761,6 +771,9 @@ function extractStatusLogs(triggered = false) {
   }
 }
 
+/**
+ * Send a reminder to the user on the website status monitoring settings.
+ */
 function sendReminder() {
   const triggers = ScriptApp.getProjectTriggers();
   if (triggers.length > 0) {
@@ -780,10 +793,9 @@ function sendReminder() {
       }
       return obj;
     }, {});
-    var messageSub = '[Website Status] ';
+    var messageSub = localMessage.messageList.mailSubSendReminderPrefix;
     var messageBody = '';
     try {
-      messageSub += 'Reminder: Active Triggers';
       let triggerInfo = triggers
         .reduce((info, trigger) => {
           if (trigger.getHandlerFunction() === 'websiteMonitoringTriggered') {
@@ -801,22 +813,30 @@ function sendReminder() {
               .getValues();
             targetWebsitesArr.shift();
             info.push(
-              `Website Monitoring:\n${targetWebsitesArr
+              `${
+                localMessage.messageList.messageMonitoredSitesPrefix
+              }:\n${targetWebsitesArr
                 .map((website) => `- ${website.join(' ')}`)
                 .join('\n')}`
             );
           } else if (
             trigger.getHandlerFunction() === 'extractStatusLogsTriggered'
           ) {
-            info.push('Trigger for periodical status log extraction is set.');
+            info.push(
+              localMessage.messageList.messageTriggerLogExtractionIsSet
+            );
           }
           return info;
         }, [])
         .join('\n');
-      messageBody = `This is a monthly reminder of the time-based triggers set for this website monitoring script:\n\n${triggerInfo}\n\n-----\nThis notice is managed by the following spreadsheet:\n${ss.getUrl()}`; //////
+      messageSub += localMessage.messageList.mailSubSendReminder;
+      messageBody = localMessage.replaceMailBodySendReminder(
+        triggerInfo,
+        ss.getUrl()
+      );
     } catch (e) {
       console.error(e.stack);
-      messageSub = '[Website Status] Error: Send Reminder'; // localMessage.messageList.mailSubErrorSendReminder;
+      messageSub += localMessage.messageList.mailSubErrorSendReminder;
       messageBody = localMessage.replaceMailBodyError(e.stack, ss.getUrl());
     } finally {
       if (options.ENABLE_CHAT_NOTIFICATION) {
