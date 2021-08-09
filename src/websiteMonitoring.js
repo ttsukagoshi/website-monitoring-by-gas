@@ -112,6 +112,7 @@ function setupLogExtractionTrigger() {
  * @param {String} frequencyUnit Unit of the value of frequencyKey, i.e., minute, hour, day, or week.
  */
 function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
+  console.info(`[setupTrigger_] Setting trigger for ${handlerFunction}...`);
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -193,6 +194,7 @@ function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
         localMessage.replaceErrorInvalidFrequencyUnit(frequencyUnit)
       );
     }
+    console.info('[setupTrigger_] Trigger set up complete.');
     ui.alert(
       localMessage.replaceAlertTitleCompleteTriggerSetup(handlerFunction),
       localMessage.replaceAlertMessageCompleteTriggerSetup(
@@ -202,6 +204,7 @@ function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
       ui.ButtonSet.OK
     );
   } catch (e) {
+    console.error(e.stack);
     ui.alert(e.stack);
   }
 }
@@ -212,32 +215,42 @@ function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
  * Trigger will be set for the first day of each month.
  */
 function setupReminderTrigger() {
+  console.info(
+    '[setupReminderTrigger] Setting trigger for the monthly reminder...'
+  );
   const ui = SpreadsheetApp.getUi();
   const localMessage = new LocalizedMessage(
     SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale()
   );
   const handlerFunction = 'sendReminder';
-  // Delete existing trigger for the same handler function.
-  ScriptApp.getProjectTriggers().forEach((trigger) => {
-    if (trigger.getHandlerFunction() === handlerFunction) {
-      ScriptApp.deleteTrigger(trigger);
-    }
-  });
-  // Set new trigger
-  ScriptApp.newTrigger(handlerFunction).timeBased().onMonthDay(1).create();
-  ui.alert(
-    localMessage.replaceAlertTitleCompleteTriggerSetup(handlerFunction),
-    localMessage.replaceAlertMessageCompleteReminderTriggerSetup(
-      Session.getActiveUser().getEmail()
-    ),
-    ui.ButtonSet.OK
-  );
+  try {
+    // Delete existing trigger for the same handler function.
+    ScriptApp.getProjectTriggers().forEach((trigger) => {
+      if (trigger.getHandlerFunction() === handlerFunction) {
+        ScriptApp.deleteTrigger(trigger);
+      }
+    });
+    // Set new trigger
+    ScriptApp.newTrigger(handlerFunction).timeBased().onMonthDay(1).create();
+    console.info('[setupReminderTrigger] Trigger set up complete.');
+    ui.alert(
+      localMessage.replaceAlertTitleCompleteTriggerSetup(handlerFunction),
+      localMessage.replaceAlertMessageCompleteReminderTriggerSetup(
+        Session.getActiveUser().getEmail()
+      ),
+      ui.ButtonSet.OK
+    );
+  } catch (e) {
+    console.error(e.stack);
+    ui.alert(e.stack);
+  }
 }
 
 /**
  * Delete existing trigger(s).
  */
 function deleteTimeBasedTriggers() {
+  console.info('[deleteTimeBasedTriggers] Deleting triggers...');
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
   const localMessage = new LocalizedMessage(
@@ -256,12 +269,14 @@ function deleteTimeBasedTriggers() {
     ScriptApp.getProjectTriggers().forEach((trigger) =>
       ScriptApp.deleteTrigger(trigger)
     );
+    console.info('[deleteTimeBasedTriggers] Deleted triggers.');
     ui.alert(
       localMessage.messageList.alertTitleComplete,
       localMessage.messageList.alertMessageTriggerDelete,
       ui.ButtonSet.OK
     );
   } catch (e) {
+    console.error(e.stack);
     ui.alert(e.stack);
   }
 }
@@ -402,7 +417,6 @@ function websiteMonitoring(triggered = false) {
       RESPONSE_CODE_WILDCARD,
       spreadsheetLocale
     );
-    console.log(JSON.stringify(options)); //////////////////
     // Get the actual HTTP response codes
     let dashboardStatus = []; // Array to record on the dashboard worksheet
     let statusChange = targetWebsites.reduce(
@@ -474,7 +488,6 @@ function websiteMonitoring(triggered = false) {
       .shift();
     latestStatusSheet.getDataRange().clearContent();
     dashboardStatus = [existingStatusHeader].concat(dashboardStatus);
-    console.log(dashboardStatus);
     latestStatusSheet
       .getRange(1, 1, dashboardStatus.length, dashboardStatus[0].length)
       .setValues(dashboardStatus);
