@@ -76,7 +76,7 @@ const MESSAGES = {
     mailSubSendReminderPrefix: '[Website Status] ',
     mailSubSendReminder: 'Reminder: Active Triggers',
     mailBodySendReminder:
-      'This is a monthly reminder, sent automatically, of the time-based triggers set for this website monitoring script:\n\n{{triggerInfo}}\n\n-----\nThis notice is managed by the following spreadsheet:\n{{spreadsheetUrl}}',
+      'This is a monthly reminder, sent automatically, of the time-based triggers set for this website monitoring script:\n\n{{triggerInfo}}\nSee the managing spreadsheet for details on the latest website status.\n\n-----\nThis notice is managed by the following spreadsheet:\n{{spreadsheetUrl}}',
     mailSubErrorSendReminder: 'Error: Send Reminder',
     messageMonitoredSitesPrefix: 'Monitored Websites',
     messageTriggerLogExtractionIsSet:
@@ -144,7 +144,7 @@ const MESSAGES = {
     mailSubSendReminderPrefix: '[サイト公開ステータス] ',
     mailSubSendReminder: 'リマインダー：設定されているトリガー',
     mailBodySendReminder:
-      'これは、サイト公開ステータス監視のトリガー設定状況をお知らせするため、毎月1日に自動的に送信されるリマインダーです。\n\n{{triggerInfo}}\n\n-----\nこの通知は次のGoogleスプレッドシートによって管理されています：\n{{spreadsheetUrl}}',
+      'これは、サイト公開ステータス監視のトリガー設定状況をお知らせするため、毎月1日に自動的に送信されるリマインダーです。\n\n{{triggerInfo}}\n最新のサイト公開ステータスについては、管理スプレッドシートをご確認ください。\n\n-----\nこの通知は次のGoogleスプレッドシートによって管理されています：\n{{spreadsheetUrl}}',
     mailSubErrorSendReminder: 'エラー：リマインダー送信',
     messageMonitoredSitesPrefix: '公開ステータスの監視対象サイト',
     messageTriggerLogExtractionIsSet:
