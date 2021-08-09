@@ -776,7 +776,13 @@ function extractStatusLogs(triggered = false) {
  */
 function sendReminder() {
   const triggers = ScriptApp.getProjectTriggers();
-  if (triggers.length > 0) {
+  if (
+    triggers.length > 0 &&
+    !(
+      triggers.length === 1 &&
+      triggers[0].getHandlerFunction() === 'sendReminder'
+    )
+  ) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const localMessage = new LocalizedMessage(ss.getSpreadsheetLocale());
     const myEmail = Session.getActiveUser().getEmail();
