@@ -14,7 +14,7 @@ updates:
     commit-message:
       prefix: 'github-actions'
       include: 'scope'
-    target-branch: 'dev'
+    target-branch: 'main'
   - package-ecosystem: 'npm'
     directory: '/'
     schedule:
@@ -24,4 +24,4 @@ updates:
     commit-message:
       prefix: 'npm'
       include: 'scope'
-    target-branch: 'dev'
+    target-branch: 'main'
