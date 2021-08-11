@@ -6,11 +6,11 @@ Website status monitoring using Google Sheets and Google Apps Script.
 
 ## About
 
-A Spreadsheet-bound apps script solution to conduct automated status monitoring on websites listed by the user in a Google Sheets management file. A separate status log file in Google Sheets will be created so that users can easily integrate data with BI services such as Google Data Studio.
+A Spreadsheet-bound apps script solution to conduct automated status monitoring on websites listed by the user in a Google Sheets management file. A separate status log file in Google Sheets will be created so that users can easily integrate data with BI services such as Google Data Studio. Notifications of changes in website status will be sent to the user's Gmail. An optional setting to send notifications to Google Chat is available.
 
-## Install
+## Copy Sample Spreadsheet
 
-Copy [this sample spreadsheet](https://docs.google.com/spreadsheets/d/1JvO090VcgvF-WwciNnzRb1_nonKJC5QHN73h_CXS1Cw/edit#gid=0) to your Google Drive.
+Copy [this sample spreadsheet](https://docs.google.com/spreadsheets/d/1JvO090VcgvF-WwciNnzRb1_nonKJC5QHN73h_CXS1Cw/edit#gid=0) to your Google Drive by selecting from the menu `File` > `Make a copy`.
 
 ## How to Use
 
