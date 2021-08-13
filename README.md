@@ -12,7 +12,7 @@ A Spreadsheet-bound apps script solution to conduct automated status monitoring 
 
 ## Copy Sample Spreadsheet
 
-Copy [this sample spreadsheet](https://docs.google.com/spreadsheets/d/1JvO090VcgvF-WwciNnzRb1_nonKJC5QHN73h_CXS1Cw/edit#gid=0) to your Google Drive by selecting from the menu `File` > `Make a copy`.
+Copy [this sample spreadsheet](https://docs.google.com/spreadsheets/d/1JvO090VcgvF-WwciNnzRb1_nonKJC5QHN73h_CXS1Cw/copy) to your Google Drive.
 
 ## How to Use
 
