@@ -329,7 +329,7 @@ function websiteMonitoring(triggered = false) {
     )
     .getValues();
   const targetWebsitesHeader = targetWebsitesArr.shift();
-  const targetWebsites = targetWebsitesArr.map((row) =>
+  var targetWebsites = targetWebsitesArr.map((row) =>
     targetWebsitesHeader.reduce((o, k, i) => {
       if (
         k === HEADER_NAME_TARGET_URL &&
@@ -340,6 +340,9 @@ function websiteMonitoring(triggered = false) {
       o[k] = row[i];
       return o;
     }, {})
+  );
+  targetWebsites = targetWebsites.filter(
+    (website) => website[HEADER_NAME_TARGET_URL] // Filter out rows with empty target URLs
   );
   // Check and update savedStatus so that it matches with targetWebsites
   const savedStatusUpdated = Object.keys(savedStatus).reduce((obj, key) => {
