@@ -1,6 +1,6 @@
 # Website Status Monitoring
 
-[![clasp](https://img.shields.io/badge/built%20with-clasp-4285f4.svg?style=flat-square)](https://github.com/google/clasp) [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier) [![CodeQL](https://github.com/ttsukagoshi/website-monitoring-by-gas/workflows/CodeQL/badge.svg)](https://github.com/ttsukagoshi/website-monitoring-by-gas/actions?query=workflow%3ACodeQL) [![GitHub Super-Linter](https://github.com/ttsukagoshi/website-monitoring-by-gas/workflows/Lint%20Code%20Base/badge.svg)](https://github.com/marketplace/actions/super-linter)
+[![clasp](https://img.shields.io/badge/built%20with-clasp-4285f4.svg?style=flat-square)](https://github.com/google/clasp) [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier) [![CodeQL](https://github.com/ttsukagoshi/website-monitoring-by-gas/workflows/CodeQL/badge.svg)](https://github.com/ttsukagoshi/website-monitoring-by-gas/actions?query=workflow%3ACodeQL) [![GitHub Super-Linter](https://github.com/ttsukagoshi/website-monitoring-by-gas/workflows/Lint%20Code%20Base/badge.svg)](https://github.com/marketplace/actions/super-linter) [![Publish Release](https://github.com/ttsukagoshi/website-monitoring-by-gas/actions/workflows/release.yml/badge.svg)](https://github.com/ttsukagoshi/website-monitoring-by-gas/actions/workflows/release.yml)
 
 Website status monitoring using Google Sheets and Google Apps Script.
 
