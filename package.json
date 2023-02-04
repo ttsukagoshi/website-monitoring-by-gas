@@ -1,6 +1,6 @@
 {
   "name": "website-monitoring-by-gas",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Website status monitoring using Google Apps Script",
   "main": "websiteMonitoring.js",
   "scripts": {
