@@ -670,11 +670,14 @@ function extractStatusLogs(triggered = false) {
     const targetWebsiteUrls = targetWebsitesArr.map((row) => {
       let urlIndex = targetWebsitesHeader.indexOf(HEADER_NAME_TARGET_URL);
       if (urlIndex < 0) {
+        // If the header name is not found, throw an error
         let errorMessage = localMessage.replaceErrorHeaderNameTargetUrlNotFound(
           HEADER_NAME_TARGET_URL,
           SHEET_NAME_DASHBOARD,
         );
         if (triggered === true) {
+          // If this function is triggered by a time-based trigger,
+          // delete the trigger to avoid further errors.
           ScriptApp.getProjectTriggers().forEach((trigger) => {
             if (
               ScriptApp.getHandlerFunction() === 'extractStatusLogsTriggered'
@@ -758,9 +761,12 @@ function extractStatusLogs(triggered = false) {
     headersArr.forEach((headers) => {
       headers.forEach((header, i) => {
         if (header !== controlHeader[i]) {
+          // If the headers do not match, throw an error
           let errorMessage =
             localMessage.messageList.errorInconsistencyInHeader;
           if (triggered === true) {
+            // If this function is triggered by a time-based trigger,
+            // delete the trigger to avoid further errors.
             ScriptApp.getProjectTriggers().forEach((trigger) => {
               if (
                 ScriptApp.getHandlerFunction() === 'extractStatusLogsTriggered'
@@ -829,6 +835,7 @@ function sendReminder() {
     var messageSub = localMessage.messageList.mailSubSendReminderPrefix;
     var messageBody = '';
     try {
+      let extractStatusLogsTriggeredExists = false;
       let triggerInfo = triggers
         .reduce((info, trigger) => {
           if (trigger.getHandlerFunction() === 'websiteMonitoringTriggered') {
@@ -853,11 +860,13 @@ function sendReminder() {
                 .join('\n')}`,
             );
           } else if (
-            trigger.getHandlerFunction() === 'extractStatusLogsTriggered'
+            trigger.getHandlerFunction() === 'extractStatusLogsTriggered' &&
+            !extractStatusLogsTriggeredExists
           ) {
             info.push(
               localMessage.messageList.messageTriggerLogExtractionIsSet,
             );
+            extractStatusLogsTriggeredExists = true;
           }
           return info;
         }, [])
