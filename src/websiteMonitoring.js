@@ -49,7 +49,7 @@ const RESPONSE_CODE_WILDCARD = 'x';
 
 function onOpen() {
   const localMessage = new LocalizedMessage(
-    SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale()
+    SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale(),
   );
   const ui = SpreadsheetApp.getUi();
   ui.createMenu(localMessage.messageList.menuTitle)
@@ -58,27 +58,27 @@ function onOpen() {
         .createMenu(localMessage.messageList.menuTriggers)
         .addItem(
           localMessage.messageList.menuSetStatusCheckTrigger,
-          'setupStatusCheckTrigger'
+          'setupStatusCheckTrigger',
         )
         .addItem(
           localMessage.messageList.menuSetLogExtractionTrigger,
-          'setupLogExtractionTrigger'
+          'setupLogExtractionTrigger',
         )
         .addItem(
           localMessage.messageList.menuSetReminderTrigger,
-          'setupReminderTrigger'
+          'setupReminderTrigger',
         )
         .addSeparator()
         .addItem(
           localMessage.messageList.menuDeleteTriggers,
-          'deleteTimeBasedTriggers'
-        )
+          'deleteTimeBasedTriggers',
+        ),
     )
     .addSeparator()
     .addItem(localMessage.messageList.menuCheckStatus, 'websiteMonitoring')
     .addItem(
       localMessage.messageList.menuExtractStatusLogs,
-      'extractStatusLogs'
+      'extractStatusLogs',
     )
     .addToUi();
 }
@@ -139,8 +139,8 @@ function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
       throw new Error(
         localMessage.replaceErrorInvalidFrequencyValue(
           frequencyKey,
-          SHEET_NAME_OPTIONS
-        )
+          SHEET_NAME_OPTIONS,
+        ),
       );
     }
     // Brief descriptions of the handler functions
@@ -155,9 +155,9 @@ function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
       localMessage.messageList.alertTitleContinueTriggerSetup,
       localMessage.replaceAlertMessageContinueTriggerSetup(
         functionDesc[handlerFunction] ? functionDesc[handlerFunction] : '',
-        myEmail
+        myEmail,
       ),
-      ui.ButtonSet.YES_NO_CANCEL
+      ui.ButtonSet.YES_NO_CANCEL,
     );
     if (continueResponse !== ui.Button.YES) {
       throw new Error(localMessage.messageList.errorTriggerSetupCanceled);
@@ -191,7 +191,7 @@ function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
         .create();
     } else {
       throw new Error(
-        localMessage.replaceErrorInvalidFrequencyUnit(frequencyUnit)
+        localMessage.replaceErrorInvalidFrequencyUnit(frequencyUnit),
       );
     }
     // Set up a trigger for monthly reminders
@@ -201,9 +201,9 @@ function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
       localMessage.replaceAlertTitleCompleteTriggerSetup(handlerFunction),
       localMessage.replaceAlertMessageCompleteTriggerSetup(
         options[frequencyKey],
-        frequencyUnit
+        frequencyUnit,
       ),
-      ui.ButtonSet.OK
+      ui.ButtonSet.OK,
     );
   } catch (e) {
     console.error(e.stack);
@@ -219,13 +219,13 @@ function setupTrigger_(handlerFunction, frequencyKey, frequencyUnit) {
  */
 function setupReminderTrigger(muteUi = false) {
   console.info(
-    '[setupReminderTrigger] Setting trigger for the monthly reminder...'
+    '[setupReminderTrigger] Setting trigger for the monthly reminder...',
   );
   if (!muteUi) {
     var ui = SpreadsheetApp.getUi();
   }
   const localMessage = new LocalizedMessage(
-    SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale()
+    SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale(),
   );
   const handlerFunction = 'sendReminder';
   try {
@@ -242,9 +242,9 @@ function setupReminderTrigger(muteUi = false) {
       ui.alert(
         localMessage.replaceAlertTitleCompleteTriggerSetup(handlerFunction),
         localMessage.replaceAlertMessageCompleteReminderTriggerSetup(
-          Session.getActiveUser().getEmail()
+          Session.getActiveUser().getEmail(),
         ),
-        ui.ButtonSet.OK
+        ui.ButtonSet.OK,
       );
     }
   } catch (e) {
@@ -265,26 +265,26 @@ function deleteTimeBasedTriggers() {
   const ui = SpreadsheetApp.getUi();
   const myEmail = Session.getActiveUser().getEmail();
   const localMessage = new LocalizedMessage(
-    SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale()
+    SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale(),
   );
   try {
     const continueResponse = ui.alert(
       localMessage.messageList.alertTitleContinueTriggerDelete,
       localMessage.replaceAlertMessageContinueTriggerDelete(myEmail),
-      ui.ButtonSet.YES_NO_CANCEL
+      ui.ButtonSet.YES_NO_CANCEL,
     );
     if (continueResponse !== ui.Button.YES) {
       throw new Error(localMessage.messageList.errorTriggerDeleteCanceled);
     }
     // Delete all existing triggers set by the user.
     ScriptApp.getProjectTriggers().forEach((trigger) =>
-      ScriptApp.deleteTrigger(trigger)
+      ScriptApp.deleteTrigger(trigger),
     );
     console.info('[deleteTimeBasedTriggers] Deleted triggers.');
     ui.alert(
       localMessage.messageList.alertTitleComplete,
       localMessage.messageList.alertMessageTriggerDelete,
-      ui.ButtonSet.OK
+      ui.ButtonSet.OK,
     );
   } catch (e) {
     console.error(e.stack);
@@ -325,7 +325,7 @@ function websiteMonitoring(triggered = false) {
       TARGET_WEBSITES_RANGE_POSITION.row,
       TARGET_WEBSITES_RANGE_POSITION.col,
       targetWebsitesSheet.getLastRow() - TARGET_WEBSITES_RANGE_POSITION.row + 1,
-      TARGET_WEBSITES_COL_NUM
+      TARGET_WEBSITES_COL_NUM,
     )
     .getValues();
   const targetWebsitesHeader = targetWebsitesArr.shift();
@@ -339,10 +339,10 @@ function websiteMonitoring(triggered = false) {
       }
       o[k] = row[i];
       return o;
-    }, {})
+    }, {}),
   );
   targetWebsites = targetWebsites.filter(
-    (website) => website[HEADER_NAME_TARGET_URL] // Filter out rows with empty target URLs
+    (website) => website[HEADER_NAME_TARGET_URL], // Filter out rows with empty target URLs
   );
   // Check and update savedStatus so that it matches with targetWebsites
   const savedStatusUpdated = Object.keys(savedStatus).reduce((obj, key) => {
@@ -381,10 +381,10 @@ function websiteMonitoring(triggered = false) {
     logSpreadsheetsHeader.reduce((o, k, i) => {
       o[k] = row[i];
       return o;
-    }, {})
+    }, {}),
   );
   const logSpreadsheetUrls = logSpreadsheets.filter(
-    (row) => row.YEAR == currentYear
+    (row) => row.YEAR == currentYear,
   );
   if (!logSpreadsheetUrls.length) {
     // Create a new spreadsheet from template
@@ -393,7 +393,7 @@ function websiteMonitoring(triggered = false) {
       ? DriveApp.getFolderById(options.DRIVE_FOLDER_ID)
       : DriveApp.getRootFolder();
     const templateFile = DriveApp.getFileById(
-      SpreadsheetApp.openByUrl(options.TEMPLATE_LOG_SHEET_URL).getId()
+      SpreadsheetApp.openByUrl(options.TEMPLATE_LOG_SHEET_URL).getId(),
       // While the code can be made more simple by asking the user to enter the ID
       // of the template spreadsheet, there is a certain logical usefulness to use
       // the template URL rather than its ID since URLs can be directly referenced
@@ -414,14 +414,14 @@ function websiteMonitoring(triggered = false) {
     });
   }
   const logSheet = SpreadsheetApp.openByUrl(
-    logSpreadsheetUrls[0].URL
+    logSpreadsheetUrls[0].URL,
   ).getSheets()[0]; // Assuming that the logs be entered on the left-most worksheet of the log spreadsheet
   try {
     // Replace wildcards in options.ALLOWED_RESPONSE_CODES and options.ERROR_RESPONSE_CODES to actual codes
     options.ALLOWED_RESPONSE_CODES = parseResponseCodes_(
       options.ALLOWED_RESPONSE_CODES,
       RESPONSE_CODE_WILDCARD,
-      spreadsheetLocale
+      spreadsheetLocale,
     );
     if (!options.ALLOWED_RESPONSE_CODES.includes('200')) {
       options.ALLOWED_RESPONSE_CODES.push('200');
@@ -429,7 +429,7 @@ function websiteMonitoring(triggered = false) {
     options.ERROR_RESPONSE_CODES = parseResponseCodes_(
       options.ERROR_RESPONSE_CODES,
       RESPONSE_CODE_WILDCARD,
-      spreadsheetLocale
+      spreadsheetLocale,
     );
     // Get the actual HTTP response codes
     let dashboardStatus = []; // Array to record on the dashboard worksheet
@@ -439,7 +439,7 @@ function websiteMonitoring(triggered = false) {
           websiteName: website['WEBSITE NAME'],
           targetUrl: website[HEADER_NAME_TARGET_URL],
           targetUrlEncoded: Utilities.base64Encode(
-            website[HEADER_NAME_TARGET_URL]
+            website[HEADER_NAME_TARGET_URL],
           ),
           status:
             savedStatusUpdated[
@@ -450,7 +450,7 @@ function websiteMonitoring(triggered = false) {
         responseRecord['responseCode'] = String(
           UrlFetchApp.fetch(responseRecord.targetUrl, {
             muteHttpExceptions: true,
-          }).getResponseCode()
+          }).getResponseCode(),
         );
         let checkEnd = new Date();
         responseRecord['timeStamp'] = standardFormatDate_(checkEnd, timeZone);
@@ -461,7 +461,7 @@ function websiteMonitoring(triggered = false) {
         ) {
           if (
             options.ERROR_RESPONSE_CODES.includes(
-              responseRecord.responseCode
+              responseRecord.responseCode,
             ) &&
             (!responseRecord.status || responseRecord.status === 'UP')
           ) {
@@ -492,7 +492,7 @@ function websiteMonitoring(triggered = false) {
         savedStatusUpdated[responseRecord.targetUrlEncoded] = responseRecord;
         return changes;
       },
-      { newErrors: [], resolved: [] }
+      { newErrors: [], resolved: [] },
     );
     // Update the worksheet on latest statuses
     let latestStatusSheet = ss.getSheetByName(SHEET_NAME_LATEST_STATUS);
@@ -514,16 +514,16 @@ function websiteMonitoring(triggered = false) {
         statusChange.newErrors
           .map(
             (errorResponse) =>
-              `Site Name: ${errorResponse.websiteName}\nURL: ${errorResponse.targetUrl}\nResponse Code: ${errorResponse.responseCode}\nResponse Time: ${errorResponse.responseTime}\n`
+              `Site Name: ${errorResponse.websiteName}\nURL: ${errorResponse.targetUrl}\nResponse Code: ${errorResponse.responseCode}\nResponse Time: ${errorResponse.responseTime}\n`,
           )
           .join('\n'),
-        ss.getUrl()
+        ss.getUrl(),
       );
       if (options.ENABLE_CHAT_NOTIFICATION) {
         // Post on Google Chat
         postToChat_(
           options.CHAT_WEBHOOK_URL,
-          `*${messageSub}*\n\n${messageBody}`
+          `*${messageSub}*\n\n${messageBody}`,
         );
       }
       if (
@@ -543,13 +543,13 @@ function websiteMonitoring(triggered = false) {
             return `Site Name: ${resolvedResponse.websiteName}\nURL: ${resolvedResponse.targetUrl}\nResponse Code: ${resolvedResponse.responseCode}\nResponse Time: ${resolvedResponse.responseTime}\n`;
           })
           .join('\n'),
-        ss.getUrl()
+        ss.getUrl(),
       );
       if (options.ENABLE_CHAT_NOTIFICATION) {
         // Post on Google Chat
         postToChat_(
           options.CHAT_WEBHOOK_URL,
-          `*${messageSub}*\n\n${messageBody}`
+          `*${messageSub}*\n\n${messageBody}`,
         );
       }
       if (
@@ -587,7 +587,7 @@ function websiteMonitoring(triggered = false) {
       ui.alert(
         localMessage.messageList.alertTitleCompleteStatusCheck,
         completeMessage,
-        ui.ButtonSet.OK
+        ui.ButtonSet.OK,
       );
     }
   } catch (e) {
@@ -606,7 +606,7 @@ function websiteMonitoring(triggered = false) {
       // Post on Google Chat
       postToChat_(
         options.CHAT_WEBHOOK_URL,
-        `*${messageSub}*\n\n${messageBody}`
+        `*${messageSub}*\n\n${messageBody}`,
       );
     }
     if (
@@ -621,7 +621,7 @@ function websiteMonitoring(triggered = false) {
       ui.alert(
         localMessage.messageList.alertTitleError,
         e.stack,
-        ui.ButtonSet.OK
+        ui.ButtonSet.OK,
       );
     }
   }
@@ -651,7 +651,7 @@ function extractStatusLogs(triggered = false) {
   try {
     // Clear the worksheet to enter new status logs
     const extractedLogsSheet = ss.getSheetByName(
-      SHEET_NAME_STATUS_LOGS_EXTRACTED
+      SHEET_NAME_STATUS_LOGS_EXTRACTED,
     );
     extractedLogsSheet.getDataRange().clearContent();
     // Get the list of target websites to monitor
@@ -663,7 +663,7 @@ function extractStatusLogs(triggered = false) {
         targetWebsitesSheet.getLastRow() -
           TARGET_WEBSITES_RANGE_POSITION.row +
           1,
-        TARGET_WEBSITES_COL_NUM
+        TARGET_WEBSITES_COL_NUM,
       )
       .getValues();
     const targetWebsitesHeader = targetWebsitesArr.shift();
@@ -672,7 +672,7 @@ function extractStatusLogs(triggered = false) {
       if (urlIndex < 0) {
         let errorMessage = localMessage.replaceErrorHeaderNameTargetUrlNotFound(
           HEADER_NAME_TARGET_URL,
-          SHEET_NAME_DASHBOARD
+          SHEET_NAME_DASHBOARD,
         );
         if (triggered === true) {
           ScriptApp.getProjectTriggers().forEach((trigger) => {
@@ -704,7 +704,7 @@ function extractStatusLogs(triggered = false) {
     // Get the start date to obtain status logs
     const today = new Date();
     const startLog = new Date(
-      new Date().setDate(today.getDate() - options.EXTRACT_STATUS_LOGS_DAYS)
+      new Date().setDate(today.getDate() - options.EXTRACT_STATUS_LOGS_DAYS),
     );
     // Extract status logs from the list of log spreadsheets
     const logSpreadsheetsArr = ss
@@ -785,9 +785,9 @@ function extractStatusLogs(triggered = false) {
         localMessage.messageList.alertTitleComplete,
         localMessage.replaceAlertMessageLogExtractionComplete(
           options.EXTRACT_STATUS_LOGS_DAYS,
-          SHEET_NAME_STATUS_LOGS_EXTRACTED
+          SHEET_NAME_STATUS_LOGS_EXTRACTED,
         ),
-        ui.ButtonSet.OK
+        ui.ButtonSet.OK,
       );
     }
   } catch (e) {
@@ -841,7 +841,7 @@ function sendReminder() {
                 targetWebsitesSheet.getLastRow() -
                   TARGET_WEBSITES_RANGE_POSITION.row +
                   1,
-                TARGET_WEBSITES_COL_NUM
+                TARGET_WEBSITES_COL_NUM,
               )
               .getValues();
             targetWebsitesArr.shift();
@@ -850,13 +850,13 @@ function sendReminder() {
                 localMessage.messageList.messageMonitoredSitesPrefix
               }:\n${targetWebsitesArr
                 .map((website) => `- ${website.join(' ')}`)
-                .join('\n')}`
+                .join('\n')}`,
             );
           } else if (
             trigger.getHandlerFunction() === 'extractStatusLogsTriggered'
           ) {
             info.push(
-              localMessage.messageList.messageTriggerLogExtractionIsSet
+              localMessage.messageList.messageTriggerLogExtractionIsSet,
             );
           }
           return info;
@@ -865,7 +865,7 @@ function sendReminder() {
       messageSub += localMessage.messageList.mailSubSendReminder;
       messageBody = localMessage.replaceMailBodySendReminder(
         triggerInfo,
-        ss.getUrl()
+        ss.getUrl(),
       );
     } catch (e) {
       console.error(e.stack);
@@ -876,7 +876,7 @@ function sendReminder() {
         // Post on Google Chat
         postToChat_(
           options.CHAT_WEBHOOK_URL,
-          `*${messageSub}*\n\n${messageBody}`
+          `*${messageSub}*\n\n${messageBody}`,
         );
       }
       if (
@@ -903,7 +903,7 @@ function sendReminder() {
 function parseResponseCodes_(
   codes,
   wildcard = 'x',
-  locale = Session.getActiveUserLocale()
+  locale = Session.getActiveUserLocale(),
 ) {
   let localMessage = new LocalizedMessage(locale);
   return codes
@@ -940,7 +940,7 @@ function parseResponseCodes_(
  */
 function standardFormatDate_(
   dateObj,
-  timeZone = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone()
+  timeZone = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(),
 ) {
   return Utilities.formatDate(dateObj, timeZone, 'yyyy-MM-dd HH:mm:ss');
 }
