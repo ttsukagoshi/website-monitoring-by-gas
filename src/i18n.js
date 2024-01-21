@@ -172,7 +172,7 @@ class LocalizedMessage {
   replacePlaceholders_(text, placeholderValues = []) {
     let replacedText = placeholderValues.reduce(
       (acc, cur) => acc.replace(new RegExp(cur.regexp, 'g'), cur.value),
-      text
+      text,
     );
     return replacedText;
   }
@@ -374,7 +374,7 @@ class LocalizedMessage {
    */
   replaceErrorHeaderNameTargetUrlNotFound(
     headerNameTargetUrl,
-    sheetNameDashboard
+    sheetNameDashboard,
   ) {
     let text = this.messageList.errorHeaderNameTargetUrlNotFound;
     let placeholderValues = [
@@ -398,7 +398,7 @@ class LocalizedMessage {
    */
   replaceAlertMessageLogExtractionComplete(
     extractStatusLogDays,
-    sheetNameStatusLogsExtracted
+    sheetNameStatusLogsExtracted,
   ) {
     let text = this.messageList.alertMessageLogExtractionComplete;
     let placeholderValues = [
