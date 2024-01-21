@@ -53,12 +53,12 @@ parserOptions:
 extends:
   - 'eslint:recommended'
   - 'plugin:prettier/recommended'
+  - 'plugin:@typescript-eslint/recommended'
 plugins:
   - '@typescript-eslint'
-
 #########
 # Rules #
 #########
-rules:
-  no-useless-escape: warn
-  semi: error
+# rules:
+#   no-useless-escape: warn
+#   semi: error
